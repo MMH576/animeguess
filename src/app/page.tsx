@@ -3,8 +3,10 @@
 import { useState, useEffect } from "react";
 import { characters } from "@/lib/characters";
 import { CharacterCard } from "@/components/CharacterCard";
+import { Leaderboard } from "@/components/Leaderboard"; 
 import { UserButton, SignInButton, useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
+import { useGameState } from "@/lib/useGameState";
 
 export default function Home() {
   const { isLoaded, isSignedIn, user } = useUser();
@@ -12,6 +14,8 @@ export default function Home() {
   const [currentIndex, setCurrentIndex] = useState<number | null>(null);
   // Add a key to force CharacterCard re-render
   const [cardKey, setCardKey] = useState(0);
+  const { resetScore } = useGameState();
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
 
   useEffect(() => {
     // Redirect to sign-in if user is not authenticated
@@ -34,6 +38,12 @@ export default function Home() {
     setCurrentIndex(nextIndex);
     // Increment key to force a fresh CharacterCard instance
     setCardKey(prev => prev + 1);
+    // Reset the score for the next round
+    resetScore();
+  };
+
+  const toggleLeaderboard = () => {
+    setShowLeaderboard(prev => !prev);
   };
 
   // Show loading state while currentIndex is null or not authenticated
@@ -86,26 +96,43 @@ export default function Home() {
           )}
         </div>
         
-        <CharacterCard
-          key={cardKey}
-          character={characters[currentIndex]}
-          onCorrectGuess={() => {
-            // Wait a bit before showing the "Next" button
-            setTimeout(() => {
-              const nextButton = document.getElementById("next-button");
-              if (nextButton) nextButton.focus();
-            }, 500);
-          }}
-        />
-        
-        <div className="mt-6 text-center">
-          <button
-            id="next-button"
-            onClick={handleNextCharacter}
-            className="px-6 py-3 bg-[#8B11D1] text-white rounded-lg hover:bg-[#8B11D1]/80 focus:outline-none focus:ring-2 focus:ring-[#8B11D1] focus:ring-offset-2 focus:ring-offset-black"
-          >
-            Next Character →
-          </button>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div>
+            <CharacterCard
+              key={cardKey}
+              character={characters[currentIndex]}
+              onCorrectGuess={() => {
+                // Wait a bit before showing the "Next" button
+                setTimeout(() => {
+                  const nextButton = document.getElementById("next-button");
+                  if (nextButton) nextButton.focus();
+                }, 500);
+              }}
+            />
+            
+            <div className="mt-6 text-center">
+              <button
+                id="next-button"
+                onClick={handleNextCharacter}
+                className="px-6 py-3 bg-[#8B11D1] text-white rounded-lg hover:bg-[#8B11D1]/80 focus:outline-none focus:ring-2 focus:ring-[#8B11D1] focus:ring-offset-2 focus:ring-offset-black mr-4"
+              >
+                Next Character →
+              </button>
+              
+              <button
+                onClick={toggleLeaderboard}
+                className="px-6 py-3 bg-transparent border border-[#8B11D1] text-[#8B11D1] rounded-lg hover:bg-[#8B11D1]/10 focus:outline-none focus:ring-2 focus:ring-[#8B11D1] focus:ring-offset-2 focus:ring-offset-black"
+              >
+                {showLeaderboard ? 'Hide Leaderboard' : 'Show Leaderboard'}
+              </button>
+            </div>
+          </div>
+          
+          {showLeaderboard && (
+            <div className="lg:col-span-1">
+              <Leaderboard />
+            </div>
+          )}
         </div>
       </div>
     </main>

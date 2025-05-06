@@ -1,8 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { Character } from "@/lib/characters";
+import { useGameState } from "@/lib/useGameState";
 
 interface CharacterCardProps {
   character: Character;
@@ -13,6 +14,15 @@ export const CharacterCard = ({ character, onCorrectGuess }: CharacterCardProps)
   const [guess, setGuess] = useState("");
   const [feedback, setFeedback] = useState("");
   const [isCorrect, setIsCorrect] = useState(false);
+  const { updateScore, submitScore, score, isSubmitting, error } = useGameState();
+
+  // Submit score when correct answer is given
+  useEffect(() => {
+    if (isCorrect) {
+      // Submit the score to Supabase
+      submitScore();
+    }
+  }, [isCorrect, submitScore]);
 
   const handleGuess = () => {
     const normalizedGuess = guess.trim().toLowerCase();
@@ -21,6 +31,8 @@ export const CharacterCard = ({ character, onCorrectGuess }: CharacterCardProps)
     if (normalizedGuess === normalizedAnswer) {
       setFeedback("✅ You got it!");
       setIsCorrect(true);
+      // Award points for correct guess
+      updateScore(10);
       onCorrectGuess();
     } else {
       setFeedback("❌ Try again");
@@ -61,7 +73,7 @@ export const CharacterCard = ({ character, onCorrectGuess }: CharacterCardProps)
           />
           <button
             onClick={handleGuess}
-            disabled={isCorrect}
+            disabled={isCorrect || isSubmitting}
             className="px-4 py-2 bg-[#8B11D1] text-white rounded-lg hover:bg-[#8B11D1]/80 focus:outline-none focus:ring-2 focus:ring-[#8B11D1] focus:ring-offset-2 focus:ring-offset-black disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Submit
@@ -75,9 +87,24 @@ export const CharacterCard = ({ character, onCorrectGuess }: CharacterCardProps)
         )}
         
         {isCorrect && (
-          <p className="text-center text-[#8B11D1]/80">
-            From: {character.anime}
-          </p>
+          <div className="space-y-2">
+            <p className="text-center text-[#8B11D1]/80">
+              From: {character.anime}
+            </p>
+            <p className="text-center text-[#8B11D1] font-medium">
+              Current Score: {score}
+            </p>
+            {isSubmitting && (
+              <p className="text-center text-[#8B11D1]/70 text-sm">
+                Saving score...
+              </p>
+            )}
+            {error && (
+              <p className="text-center text-red-500 text-sm">
+                {error}
+              </p>
+            )}
+          </div>
         )}
       </div>
     </div>

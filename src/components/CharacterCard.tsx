@@ -14,15 +14,16 @@ export const CharacterCard = ({ character, onCorrectGuess }: CharacterCardProps)
   const [guess, setGuess] = useState("");
   const [feedback, setFeedback] = useState("");
   const [isCorrect, setIsCorrect] = useState(false);
+  const [hasSubmittedScore, setHasSubmittedScore] = useState(false);
   const { updateScore, submitScore, score, isSubmitting, error } = useGameState();
 
-  // Submit score when correct answer is given
+  // Submit score when correct answer is given, but only once
   useEffect(() => {
-    if (isCorrect) {
-      // Submit the score to Supabase
+    if (isCorrect && !hasSubmittedScore) {
+      setHasSubmittedScore(true);
       submitScore();
     }
-  }, [isCorrect, submitScore]);
+  }, [isCorrect, submitScore, hasSubmittedScore]);
 
   const handleGuess = () => {
     const normalizedGuess = guess.trim().toLowerCase();

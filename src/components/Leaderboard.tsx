@@ -1,162 +1,145 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useUser } from '@clerk/nextjs';
+import type { Score } from '@/lib/supabaseClient';
 
-type LeaderboardEntry = {
-  user_id: string;
-  score: number;
-  created_at?: string;
-};
+interface LeaderboardProps {
+  initialPeriod?: 'all' | 'week' | 'month';
+  // initialDifficulty removed until database supports it
+}
 
-type PeriodOption = 'week' | 'month' | 'all';
-
-export function Leaderboard() {
-  const { isLoaded, user } = useUser();
-  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+export function Leaderboard({ 
+  initialPeriod = 'all'
+}: LeaderboardProps) {
+  const { user } = useUser();
+  const [scores, setScores] = useState<Score[]>([]);
   const [loading, setLoading] = useState(true);
-  const [period, setPeriod] = useState<PeriodOption>('week');
   const [error, setError] = useState<string | null>(null);
+  const [period, setPeriod] = useState<'all' | 'week' | 'month'>(initialPeriod);
+  
+  // Note: Difficulty filtering removed until database supports it
+  // const [difficulty, setDifficulty] = useState<'all' | 'easy' | 'normal' | 'hard'>(initialDifficulty);
 
-  // Fetch leaderboard data when period changes or component mounts
   useEffect(() => {
-    async function fetchLeaderboard() {
+    const fetchLeaderboard = async () => {
       setLoading(true);
       setError(null);
       
       try {
-        const response = await fetch(`/api/scores?period=${period}&limit=10`);
+        // Build query parameters - Note: difficulty parameter is not used until database supports it
+        const params = new URLSearchParams();
+        if (period !== 'all') params.append('period', period);
+        params.append('limit', '20');
         
+        // Fetch the leaderboard data
+        const response = await fetch(`/api/scores?${params.toString()}`);
         if (!response.ok) {
           throw new Error('Failed to fetch leaderboard data');
         }
         
         const data = await response.json();
-        setLeaderboard(data.leaderboard || []);
+        setScores(data.leaderboard || []);
       } catch (err) {
         console.error('Error fetching leaderboard:', err);
-        setError('Unable to load leaderboard data. Please try again later.');
+        setError('Failed to load leaderboard. Please try again later.');
       } finally {
         setLoading(false);
       }
-    }
+    };
     
     fetchLeaderboard();
   }, [period]);
 
-  const handlePeriodChange = (newPeriod: PeriodOption) => {
+  const handlePeriodChange = (newPeriod: 'all' | 'week' | 'month') => {
     setPeriod(newPeriod);
   };
 
-  // Format username to display first 3 chars + last 4 chars for privacy
-  const formatUserId = (userId: string) => {
-    if (user && user.id === userId) {
-      return 'You';
-    }
-    
-    if (userId.length <= 7) {
-      return userId;
-    }
-    
-    return `${userId.substring(0, 3)}...${userId.substring(userId.length - 4)}`;
-  };
-
-  // Show loading state
-  if (loading) {
-    return (
-      <div className="bg-black/80 p-6 rounded-lg shadow-lg max-w-md mx-auto">
-        <h2 className="text-2xl font-bold text-[#8B11D1] mb-4">Leaderboard</h2>
-        <div className="flex justify-center">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#8B11D1]"></div>
-        </div>
-      </div>
-    );
-  }
-
-  // Show error state
-  if (error) {
-    return (
-      <div className="bg-black/80 p-6 rounded-lg shadow-lg max-w-md mx-auto">
-        <h2 className="text-2xl font-bold text-[#8B11D1] mb-4">Leaderboard</h2>
-        <p className="text-red-400">{error}</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="bg-black/80 p-6 rounded-lg shadow-lg max-w-md mx-auto">
-      <h2 className="text-2xl font-bold text-[#8B11D1] mb-4">Leaderboard</h2>
+    <div className="flex flex-col space-y-4 w-full max-w-md mx-auto bg-black/50 p-6 rounded-xl shadow-lg">
+      <h2 className="text-xl font-bold text-center text-white">Leaderboard</h2>
       
-      {/* Period selector */}
-      <div className="flex space-x-2 mb-4">
-        <button 
-          onClick={() => handlePeriodChange('week')}
-          className={`px-3 py-1 rounded-md ${period === 'week' 
-            ? 'bg-[#8B11D1] text-white' 
-            : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
-        >
-          This Week
-        </button>
-        <button 
-          onClick={() => handlePeriodChange('month')}
-          className={`px-3 py-1 rounded-md ${period === 'month' 
-            ? 'bg-[#8B11D1] text-white' 
-            : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
-        >
-          This Month
-        </button>
-        <button 
-          onClick={() => handlePeriodChange('all')}
-          className={`px-3 py-1 rounded-md ${period === 'all' 
-            ? 'bg-[#8B11D1] text-white' 
-            : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
-        >
-          All Time
-        </button>
+      {/* Filter controls */}
+      <div className="flex flex-col sm:flex-row gap-2 justify-between">
+        <div className="flex gap-2">
+          <button 
+            className={`px-3 py-1 text-sm rounded-full ${period === 'all' ? 'bg-[#8B11D1] text-white' : 'bg-black/30 text-[#8B11D1]'}`}
+            onClick={() => handlePeriodChange('all')}
+          >
+            All Time
+          </button>
+          <button 
+            className={`px-3 py-1 text-sm rounded-full ${period === 'month' ? 'bg-[#8B11D1] text-white' : 'bg-black/30 text-[#8B11D1]'}`}
+            onClick={() => handlePeriodChange('month')}
+          >
+            Month
+          </button>
+          <button 
+            className={`px-3 py-1 text-sm rounded-full ${period === 'week' ? 'bg-[#8B11D1] text-white' : 'bg-black/30 text-[#8B11D1]'}`}
+            onClick={() => handlePeriodChange('week')}
+          >
+            Week
+          </button>
+        </div>
+        
+        {/* Difficulty filter removed until database supports it */}
       </div>
       
       {/* Leaderboard table */}
-      {leaderboard.length > 0 ? (
-        <div className="overflow-hidden rounded-lg border border-gray-800">
-          <table className="min-w-full divide-y divide-gray-800">
-            <thead className="bg-gray-900">
+      {loading ? (
+        <div className="flex justify-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#8B11D1]"></div>
+        </div>
+      ) : error ? (
+        <div className="text-red-400 text-center py-4">{error}</div>
+      ) : scores.length === 0 ? (
+        <div className="text-[#8B11D1]/70 text-center py-8">
+          No scores yet. Be the first to play!
+        </div>
+      ) : (
+        <div className="overflow-hidden rounded-lg border border-[#8B11D1]/20">
+          <table className="min-w-full divide-y divide-[#8B11D1]/20">
+            <thead className="bg-black/40">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-[#8B11D1] uppercase tracking-wider">
                   Rank
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-[#8B11D1] uppercase tracking-wider">
                   Player
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">
+                <th className="px-4 py-3 text-right text-xs font-medium text-[#8B11D1] uppercase tracking-wider">
                   Score
                 </th>
+                {/* Difficulty column removed until database supports it */}
               </tr>
             </thead>
-            <tbody className="bg-black divide-y divide-gray-800">
-              {leaderboard.map((entry, index) => (
-                <tr key={`${entry.user_id}-${index}`} className={
-                  isLoaded && user && user.id === entry.user_id
-                    ? "bg-[#8B11D1]/10"
-                    : ""
-                }>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-300">
-                    {index + 1}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-300">
-                    {formatUserId(entry.user_id)}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-300 text-right font-mono">
-                    {entry.score}
-                  </td>
-                </tr>
-              ))}
+            <tbody className="bg-black/20 divide-y divide-[#8B11D1]/10">
+              {scores.map((score, index) => {
+                const isCurrentUser = user?.id === score.user_id;
+                
+                return (
+                  <tr 
+                    key={score.id} 
+                    className={isCurrentUser ? "bg-[#8B11D1]/20" : ""}
+                  >
+                    <td className="px-4 py-2 whitespace-nowrap text-sm text-white">
+                      {index + 1}
+                    </td>
+                    <td className="px-4 py-2 whitespace-nowrap text-sm">
+                      <span className={isCurrentUser ? "text-white font-semibold" : "text-white/80"}>
+                        {isCurrentUser ? "You" : `Player ${score.user_id.substring(0, 8)}`}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2 whitespace-nowrap text-sm text-right text-white font-medium">
+                      {score.score}
+                    </td>
+                    {/* Difficulty column removed until database supports it */}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
-      ) : (
-        <p className="text-gray-400 text-center py-8">
-          No scores recorded for this time period yet. Be the first!
-        </p>
       )}
     </div>
   );

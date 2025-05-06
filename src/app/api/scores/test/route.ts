@@ -1,125 +1,128 @@
+import { getServerSupabase } from '@/lib/supabaseClient';
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabaseClient';
-import { getAuth } from '@clerk/nextjs/server';
 
 /**
  * This is a test endpoint for debugging score submission issues
  * It returns detailed connection and environment information
  */
 export async function GET(request: NextRequest) {
-  const auth = getAuth(request);
-  
-  return NextResponse.json({
-    auth: {
-      isAuthenticated: !!auth.userId,
-      userId: auth.userId || null
-    },
-    supabase: {
-      configured: {
-        url: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-        key: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-      },
-      client: {
-        initialized: !!supabase
-      }
-    },
-    testValues: {
-      validScore: 100
-    },
-    message: "Use this endpoint to test Supabase connections. Make a POST request with a score to test submission."
-  });
+  try {
+    // Get query parameters
+    const url = new URL(request.url);
+    const limit = parseInt(url.searchParams.get('limit') || '5', 10);
+
+    // Get server-side Supabase client
+    const supabase = getServerSupabase();
+    if (!supabase) {
+      return NextResponse.json({
+        error: 'Database configuration error'
+      }, { status: 500 });
+    }
+    
+    // Query latest scores
+    const { data, error } = await supabase
+      .from('scores')
+      .select('id, user_id, score, created_at')
+      .order('created_at', { ascending: false })
+      .limit(limit);
+      
+    if (error) {
+      return NextResponse.json({
+        success: false,
+        error: 'Query failed',
+        details: error.message
+      }, { status: 500 });
+    }
+    
+    return NextResponse.json({
+      success: true,
+      scores: data || [],
+      message: 'Test the main leaderboard at /api/scores?period=all&limit=10'
+    });
+  } catch (error) {
+    return NextResponse.json({
+      success: false,
+      error: 'Test failed',
+      details: error instanceof Error ? error.message : String(error)
+    }, { status: 500 });
+  }
 }
 
 /**
  * Test endpoint for score submission
- * Returns detailed error information if submission fails
+ * This endpoint bypasses authentication for testing purposes
  */
 export async function POST(request: NextRequest) {
-  const auth = getAuth(request);
-  
-  // Check if user is authenticated
-  if (!auth.userId) {
-    return NextResponse.json({
-      success: false,
-      error: 'Authentication required',
-      authDetails: { userId: null }
-    }, { status: 401 });
-  }
-
   try {
-    // Parse request body
-    let body;
+    // 1. Parse request
+    let data;
     try {
-      const text = await request.text();
-      console.log('Request body text:', text);
-      body = text ? JSON.parse(text) : {};
-    } catch (parseError) {
-      return NextResponse.json({
-        success: false,
-        error: 'Request parsing failed',
-        details: parseError instanceof Error ? parseError.message : 'Unknown parsing error',
-        solution: 'Ensure you\'re sending valid JSON with a "score" field'
-      }, { status: 400 });
+      data = await request.json();
+    } catch {
+      // Default test data
+      data = { score: 100 };
     }
     
-    // Use provided score or fallback to test value
-    const score = typeof body.score === 'number' ? body.score : 50;
+    const { score = 100 } = data;
     
-    // Check Supabase configuration
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    // 2. Get server-side Supabase client
+    const supabase = getServerSupabase();
+    if (!supabase) {
       return NextResponse.json({
-        success: false,
-        error: 'Supabase configuration missing',
-        details: {
-          url: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-          key: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-        },
-        solution: 'Check your .env.local file'
+        error: 'Database configuration error',
+        details: 'Missing environment variables for Supabase',
       }, { status: 500 });
     }
     
-    // Attempt insert with detailed error handling
-    try {
-      console.log(`Test inserting score ${score} for user ${auth.userId}`);
-      
-      const { data, error } = await supabase
-        .from('scores')
-        .insert([{ user_id: auth.userId, score }])
-        .select();
-      
-      if (error) {
-        return NextResponse.json({
-          success: false,
-          error: 'Database insertion failed',
-          details: error,
-          debug: {
-            userId: auth.userId,
-            score,
-            supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL
-          }
-        }, { status: 500 });
-      }
-      
-      return NextResponse.json({
-        success: true,
-        message: 'Score inserted successfully',
-        data,
-        testInfo: 'If this worked, your main score submission should also work'
-      });
-    } catch (supabaseError) {
+    // 3. Create test user ID - this is a test endpoint, so we use a unique ID per test
+    const testUserId = `test-user-${Date.now()}`;
+    
+    // 4. Attempt insertion with minimal fields to avoid column errors
+    console.log(`Testing score insertion with user_id: ${testUserId} and score: ${score}`);
+    const { error: insertError } = await supabase
+      .from('scores')
+      .insert([{ 
+        user_id: testUserId, 
+        score
+      }])
+      .select();
+    
+    if (insertError) {
+      console.error('Test insert failed:', insertError);
       return NextResponse.json({
         success: false,
-        error: 'Supabase operation error',
-        details: supabaseError instanceof Error ? supabaseError.message : 'Unknown error',
-        trace: supabaseError instanceof Error ? supabaseError.stack : null
+        error: 'Insert failed',
+        details: insertError.message
       }, { status: 500 });
     }
-  } catch (generalError) {
+    
+    // 5. Verify the data was inserted
+    const { data: verifyData, error: verifyError } = await supabase
+      .from('scores')
+      .select('*')
+      .eq('user_id', testUserId)
+      .single();
+    
+    if (verifyError) {
+      return NextResponse.json({
+        success: false,
+        error: 'Verification failed',
+        details: verifyError.message
+      }, { status: 500 });
+    }
+    
+    // 6. Success!
+    return NextResponse.json({
+      success: true,
+      message: 'Score inserted successfully',
+      data: verifyData
+    });
+  } catch (error) {
+    console.error('Unexpected error in test endpoint:', error);
     return NextResponse.json({
       success: false,
-      error: 'General test failure',
-      details: generalError instanceof Error ? generalError.message : 'Unknown error',
-      trace: generalError instanceof Error ? generalError.stack : null
+      error: 'Test failed',
+      details: error instanceof Error ? error.message : String(error)
     }, { status: 500 });
   }
 } 

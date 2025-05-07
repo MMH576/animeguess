@@ -7,4 +7,4 @@ CREATE INDEX IF NOT EXISTS scores_difficulty_idx ON public.scores(difficulty);
 -- Update any existing scores to use 'normal' difficulty
 UPDATE public.scores SET difficulty = 'normal' WHERE difficulty IS NULL;
 
--- You can run this command in the Supabase SQL Editor when you're ready to add difficulty support 
+-- You can run this command in the Supabase SQL Editor when you're ready to add difficulty support  

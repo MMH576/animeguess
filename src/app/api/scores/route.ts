@@ -45,30 +45,75 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 4. Insert the score using the authenticated user's ID
-    // Note: We're not including the difficulty field to avoid the column error
-    const { data, error } = await supabase
+    // 4. Check if user already has a score
+    const { data: existingScore, error: fetchError } = await supabase
       .from('scores')
-      .insert([{ 
-        user_id: userId, 
-        score
-        // Difficulty field removed until database is updated
-      }])
-      .select()
+      .select('id, score')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(1)
       .single();
 
-    if (error) {
-      console.error('Error submitting score:', error);
-      return NextResponse.json(
-        { error: 'Failed to save score' },
-        { status: 500 }
-      );
+    let result;
+    
+    // 5. Add the new score to the existing total or create a new record
+    if (existingScore) {
+      // Calculate the new cumulative score
+      const newTotalScore = existingScore.score + score;
+      
+      // Update the user's score with the new total
+      const { data, error } = await supabase
+        .from('scores')
+        .update({ score: newTotalScore })
+        .eq('id', existingScore.id)
+        .select()
+        .single();
+        
+      if (error) {
+        console.error('Error updating score:', error);
+        return NextResponse.json(
+          { error: 'Failed to update score' },
+          { status: 500 }
+        );
+      }
+      
+      result = data;
+    } else {
+      // No existing score found or error occurred
+      if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 is "no rows returned" error
+        console.error('Error checking existing score:', fetchError);
+        return NextResponse.json(
+          { error: 'Failed to check existing score' },
+          { status: 500 }
+        );
+      }
+      
+      // 6. If user has no existing score, insert a new one
+      const { data, error } = await supabase
+        .from('scores')
+        .insert([{ 
+          user_id: userId, 
+          score
+          // Difficulty field removed until database is updated
+        }])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error submitting score:', error);
+        return NextResponse.json(
+          { error: 'Failed to save score' },
+          { status: 500 }
+        );
+      }
+      
+      result = data;
     }
 
-    // 5. Return success response with the saved score
+    // 7. Return success response with the saved/updated score
     return NextResponse.json({ 
       success: true, 
-      score: data 
+      score: result 
     });
   } catch (error) {
     console.error('Error in score submission:', error);
@@ -122,8 +167,6 @@ export async function GET(request: NextRequest) {
       query = query.gte('created_at', monthAgo.toISOString());
     }
     
-    // Difficulty filter removed until database is updated
-    
     // 4. Execute the query
     const { data, error } = await query;
 
@@ -136,14 +179,24 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 6. Return the leaderboard data (add default difficulty for UI compatibility)
-    const leaderboardWithDifficulty = data?.map(score => ({
+    // 6. Process results to ensure only one entry per user with the latest score
+    const userScoreMap = new Map();
+    
+    data?.forEach(score => {
+      userScoreMap.set(score.user_id, score);
+    });
+    
+    const uniqueScores = Array.from(userScoreMap.values());
+    uniqueScores.sort((a, b) => b.score - a.score);
+    
+    // 7. Return the processed leaderboard data (add default difficulty for UI compatibility)
+    const leaderboardWithDifficulty = uniqueScores.map(score => ({
       ...score,
       difficulty: 'normal' // Add default difficulty for UI compatibility
     })) || [];
     
     return NextResponse.json({ 
-      leaderboard: leaderboardWithDifficulty,
+      leaderboard: leaderboardWithDifficulty.slice(0, limit),
       period,
       difficulty: 'all'  // Default since filtering is disabled
     });

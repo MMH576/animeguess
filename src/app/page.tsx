@@ -6,9 +6,10 @@ import { useRouter } from "next/navigation";
 import { useGameState } from "@/lib/useGameState";
 import { Leaderboard } from "@/components/Leaderboard";
 import AniListImage from "@/components/AniListImage";
+import DifficultySelector from "@/components/DifficultySelector";
 
 export default function Home() {
-  const { isLoaded, isSignedIn, user } = useUser();
+  const { isLoaded, isSignedIn } = useUser();
   const router = useRouter();
   const [cardKey, setCardKey] = useState(0);
   const { resetScore, updateScore, submitScore, score, isSubmitting, error } = useGameState();
@@ -19,6 +20,7 @@ export default function Home() {
   const [hasSubmittedScore, setHasSubmittedScore] = useState(false);
   const [characterName, setCharacterName] = useState("");
   const [isSkipping, setIsSkipping] = useState(false);
+  const [isEasyMode, setIsEasyMode] = useState(false);
 
   useEffect(() => {
     // Redirect to sign-in if user is not authenticated
@@ -47,6 +49,13 @@ export default function Home() {
     setCardKey(prev => prev + 1);
   };
 
+  const handleToggleDifficulty = () => {
+    // Toggle easy mode
+    setIsEasyMode(prev => !prev);
+    // Get a new character when changing difficulty
+    handleNewCharacter();
+  };
+
   const handleSkip = () => {
     // Show correct answer briefly
     setIsSkipping(true);
@@ -62,11 +71,12 @@ export default function Home() {
     const normalizedGuess = guess.trim().toLowerCase();
     const fullName = characterName.toLowerCase();
     
-    // Split the name and get the first part (typically the first name)
+    // Split the name into parts
     const nameParts = fullName.split(" ");
-    const firstName = nameParts[0];
+    const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : "";
     
     // Special cases for characters who are known by different names
+    // Include only one-word names as acceptable answers
     const popularNicknames: Record<string, string[]> = {
       "monkey d. luffy": ["luffy"],
       "roronoa zoro": ["zoro"],
@@ -97,6 +107,7 @@ export default function Home() {
       "nezuko kamado": ["nezuko"],
       "ash ketchum": ["ash"],
       "satoshi": ["ash"],
+      // Add more character nicknames as needed
     };
     
     // For characters known by their last names
@@ -104,29 +115,34 @@ export default function Home() {
       "ackerman", "uchiha", "hatake", "yeager", "uzumaki"
     ];
     
-    // Check if the character's full name is in our list of popular nicknames
-    const acceptableNames: string[] = popularNicknames[fullName] || [];
+    // Start with any popular nicknames
+    let acceptableNames: string[] = popularNicknames[fullName] || [];
     
-    // Always add the first name to acceptable names
-    acceptableNames.push(firstName);
-    
-    // Add the last name for characters commonly known by their family names
-    if (nameParts.length > 1) {
-      const lastName = nameParts[nameParts.length - 1];
-      if (knownByLastName.includes(lastName)) {
-        acceptableNames.push(lastName);
+    // Always accept any individual part of the name
+    // This handles first names, last names, and middle names
+    nameParts.forEach(part => {
+      if (part.length > 1 && !part.endsWith(".")) {  // Skip initials like "d."
+        acceptableNames.push(part);
       }
+    });
+    
+    // Special handling for last names commonly used
+    if (lastName && knownByLastName.includes(lastName)) {
+      acceptableNames.push(lastName);
     }
     
-    // Add the full name as an acceptable answer
-    acceptableNames.push(fullName);
+    // Strip any non-single-word guesses
+    acceptableNames = acceptableNames.filter(name => !name.includes(" "));
+    
+    // All modes award same points now
+    const points = 10;
     
     // Check if the guess matches any acceptable name
     if (acceptableNames.includes(normalizedGuess)) {
       setFeedback("✅ You got it!");
       setIsCorrect(true);
       // Award points for correct guess
-      updateScore(10);
+      updateScore(points);
       // Wait a bit before showing the "Next" button
       setTimeout(() => {
         const nextButton = document.getElementById("next-button");
@@ -173,9 +189,10 @@ export default function Home() {
           </h1>
           
           <div className="flex items-center gap-4">
-            <p className="text-[#8B11D1]">
-              Hi, {user.firstName || user.username || 'Player'}!
-            </p>
+            <DifficultySelector 
+              isEasyMode={isEasyMode} 
+              onToggle={handleToggleDifficulty}
+            />
             <UserButton 
               appearance={{
                 elements: {
@@ -196,10 +213,11 @@ export default function Home() {
               >
                 <AniListImage 
                   key={cardKey}
-                  onNewImage={name => setCharacterName(name)}
+                  onNewImage={setCharacterName}
                   width={320}
                   height={384}
-                  className={!isCorrect && !isSkipping ? "blur-md filter transition-all duration-300" : "transition-all duration-300"}
+                  className={`transition-all duration-300`}
+                  difficulty={isEasyMode ? "easy" : "normal"}
                 />
                 
                 {/* Overlay message when correct */}
@@ -251,11 +269,13 @@ export default function Home() {
                     </button>
                   </div>
                   
-                  {feedback && (
-                    <p className="text-center font-medium text-[#8B11D1] text-lg">
-                      {feedback}
-                    </p>
-                  )}
+                  <div className="flex justify-between items-center">
+                    {feedback && (
+                      <p className="font-medium text-[#8B11D1] text-lg">
+                        {feedback}
+                      </p>
+                    )}
+                  </div>
                 </div>
               )}
               

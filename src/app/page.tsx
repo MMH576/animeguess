@@ -10,19 +10,21 @@ import DifficultySelector from "@/components/DifficultySelector";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "@/components/ui/use-toast";
 
 export default function Home() {
   const { isLoaded, isSignedIn } = useUser();
   const router = useRouter();
   const [cardKey, setCardKey] = useState(0);
-  const { resetScore, updateScore, submitScore, score, isSubmitting, error } = useGameState();
+  const { updateScore, submitScore, score, isSubmitting, error } = useGameState();
   const [guess, setGuess] = useState("");
   const [feedback, setFeedback] = useState("");
   const [isCorrect, setIsCorrect] = useState(false);
   const [hasSubmittedScore, setHasSubmittedScore] = useState(false);
-  const [characterName, setCharacterName] = useState("");
+  const [characterName, setCharacterName] = useState<string>("");
   const [isSkipping, setIsSkipping] = useState(false);
   const [isEasyMode, setIsEasyMode] = useState(false);
+  const [currentAnime, setCurrentAnime] = useState<string>("");
 
   useEffect(() => {
     // Redirect to sign-in if user is not authenticated
@@ -56,15 +58,12 @@ export default function Home() {
   }, []);
 
   const handleNewCharacter = () => {
-    // Reset game state
+    setCardKey(prev => prev + 1);
+    setIsCorrect(false);
     setGuess("");
     setFeedback("");
-    setIsCorrect(false);
     setIsSkipping(false);
-    setHasSubmittedScore(false);
-    resetScore();
-    // Increment key to force a fresh AniListImage instance
-    setCardKey(prev => prev + 1);
+    setCurrentAnime("");
   };
 
   const handleToggleDifficulty = () => {
@@ -86,86 +85,21 @@ export default function Home() {
   };
 
   const handleGuess = () => {
+    // Basic normalization for case-insensitive comparison
     const normalizedGuess = guess.trim().toLowerCase();
-    const fullName = characterName.toLowerCase();
-    
-    // Split the name into parts
-    const nameParts = fullName.split(" ");
-    const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : "";
-    
-    // Special cases for characters who are known by different names
-    // Include only one-word names as acceptable answers
-    const popularNicknames: Record<string, string[]> = {
-      "monkey d. luffy": ["luffy"],
-      "roronoa zoro": ["zoro"],
-      "vinsmoke sanji": ["sanji"],
-      "nico robin": ["robin"],
-      "usopp": ["usopp", "sogeking"],
-      "tony tony chopper": ["chopper"],
-      "trafalgar d. water law": ["law", "trafalgar"],
-      "edward newgate": ["whitebeard"],
-      "portgas d. ace": ["ace"],
-      "marshall d. teach": ["blackbeard", "teach"],
-      "gol d. roger": ["roger"],
-      "son goku": ["goku", "kakarot"],
-      "vegeta": ["vegeta"],
-      "edward elric": ["ed", "edward", "fullmetal"],
-      "alphonse elric": ["al", "alphonse"],
-      "naruto uzumaki": ["naruto"],
-      "sasuke uchiha": ["sasuke"],
-      "kakashi hatake": ["kakashi"],
-      "itachi uchiha": ["itachi"],
-      "light yagami": ["light", "kira"],
-      "l lawliet": ["l", "ryuzaki"],
-      "spike spiegel": ["spike"],
-      "eren yeager": ["eren"],
-      "mikasa ackerman": ["mikasa"],
-      "levi ackerman": ["levi"],
-      "tanjiro kamado": ["tanjiro"],
-      "nezuko kamado": ["nezuko"],
-      "ash ketchum": ["ash"],
-      "satoshi": ["ash"],
-      // Add more character nicknames as needed
-    };
-    
-    // For characters known by their last names
-    const knownByLastName = [
-      "ackerman", "uchiha", "hatake", "yeager", "uzumaki"
-    ];
-    
-    // Start with any popular nicknames
-    let acceptableNames: string[] = popularNicknames[fullName] || [];
-    
-    // Always accept any individual part of the name
-    // This handles first names, last names, and middle names
-    nameParts.forEach(part => {
-      if (part.length > 1 && !part.endsWith(".")) {  // Skip initials like "d."
-        acceptableNames.push(part);
-      }
-    });
-    
-    // Special handling for last names commonly used
-    if (lastName && knownByLastName.includes(lastName)) {
-      acceptableNames.push(lastName);
-    }
-    
-    // Strip any non-single-word guesses
-    acceptableNames = acceptableNames.filter(name => !name.includes(" "));
-    
-    // All modes award same points now
-    const points = 10;
-    
-    // Check if the guess matches any acceptable name
-    if (acceptableNames.includes(normalizedGuess)) {
-      setFeedback("✅ You got it!");
+    const normalizedCharacter = characterName.trim().toLowerCase();
+
+    if (normalizedGuess === normalizedCharacter) {
+      setFeedback("✅ Correct!");
       setIsCorrect(true);
-      // Award points for correct guess
-      updateScore(points);
-      // Wait a bit before showing the "Next" button
-      setTimeout(() => {
-        const nextButton = document.getElementById("next-button");
-        if (nextButton) nextButton.focus();
-      }, 500);
+      updateScore(10);
+      
+      // Show toast notification
+      toast({
+        title: "Correct Answer!",
+        description: `+10 points${currentAnime ? ` - ${currentAnime}` : ""}`,
+        variant: "success",
+      });
     } else {
       setFeedback("❌ Try again");
     }
@@ -177,15 +111,22 @@ export default function Home() {
     }
   };
 
+  const handleSetCharacterName = (name: string, animeTitle?: string) => {
+    setCharacterName(name);
+    if (animeTitle) {
+      setCurrentAnime(animeTitle);
+    }
+  };
+
   // Show loading state while not authenticated
   if (!isLoaded || !isSignedIn) {
     return (
-      <main className="min-h-screen bg-[#0a0b14] py-12">
+      <main className="min-h-screen bg-[#0B0C10] py-12">
         <div className="container mx-auto px-4 flex flex-col items-center">
           <motion.h1 
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-3xl font-bold text-center mb-8 text-[#8B11D1]"
+            className="text-3xl font-bold text-center mb-8 text-[#66FCF1]"
           >
             Guess the Anime Character!
           </motion.h1>
@@ -195,7 +136,7 @@ export default function Home() {
             transition={{ duration: 0.5 }}
             className="flex justify-center"
           >
-            <div className="animate-pulse bg-[#8B11D1]/10 rounded-xl shadow-lg w-64 h-64" />
+            <div className="animate-pulse bg-[#1F2833] rounded-xl shadow-lg w-64 h-64" />
           </motion.div>
         </div>
       </main>
@@ -203,7 +144,7 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-[#0a0b14] py-8">
+    <main className="min-h-screen bg-[#0B0C10] py-8">
       <div className="container mx-auto px-4">
         {/* Header with title and difficulty selector */}
         <motion.div 
@@ -225,7 +166,7 @@ export default function Home() {
               transition={{ type: "spring", stiffness: 300 }}
             />
             <motion.span 
-              className="bg-gradient-to-r from-[#FF5F6D] to-[#A71AEF] text-transparent bg-clip-text font-black uppercase tracking-widest text-shadow text-2xl"
+              className="bg-gradient-to-r from-[#66FCF1] to-[#45A29E] text-transparent bg-clip-text font-black uppercase tracking-widest text-shadow text-2xl"
               initial={{ scale: 0.9 }}
               animate={{ scale: 1 }}
               whileHover={{ scale: 1.05 }}
@@ -252,20 +193,20 @@ export default function Home() {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
-              {/* Purple glow effect as a separate element behind the button */}
-              <div className="absolute inset-0 rounded-full bg-[#A71AEF] blur-xl opacity-40 group-hover:opacity-70 transition-all duration-300 scale-[2]"></div>
+              {/* Teal glow effect as a separate element behind the button */}
+              <div className="absolute inset-0 rounded-full bg-[#66FCF1] blur-xl opacity-40 group-hover:opacity-70 transition-all duration-300 scale-[2]"></div>
               
               <UserButton 
                 appearance={{
                   elements: {
-                    userButtonAvatarBox: 'w-full h-full rounded-full border-2 border-[#A71AEF] shadow-xl shadow-[#8B11D1]/40 overflow-hidden z-10',
+                    userButtonAvatarBox: 'w-full h-full rounded-full border-2 border-[#66FCF1] shadow-xl shadow-[#66FCF1]/40 overflow-hidden z-10',
                     userButtonBox: 'h-12 w-12 relative z-10',
                     userButtonTrigger: 'h-12 w-12 relative z-10',
                     userButtonAvatarImage: 'w-full h-full object-cover rounded-full',
-                    userButtonPopoverCard: 'border border-[#A71AEF]/50 shadow-lg shadow-[#8B11D1]/30 rounded-xl',
-                    userButtonPopoverActionButton: 'hover:bg-[#A71AEF]/10',
-                    userButtonPopoverActionButtonText: 'text-[#0a0b14] hover:text-[#A71AEF]',
-                    userButtonPopoverFooter: 'border-t border-[#A71AEF]/20'
+                    userButtonPopoverCard: 'border border-[#66FCF1]/50 shadow-lg shadow-[#66FCF1]/30 rounded-xl bg-[#1F2833]',
+                    userButtonPopoverActionButton: 'hover:bg-[#66FCF1]/10',
+                    userButtonPopoverActionButtonText: 'text-[#C5C8C7] hover:text-[#66FCF1]',
+                    userButtonPopoverFooter: 'border-t border-[#66FCF1]/20'
                   }
                 }}
               />
@@ -280,7 +221,7 @@ export default function Home() {
             <div className="flex flex-col items-center">
               {/* Character Image */}
               <motion.div 
-                className="relative w-full aspect-square max-w-md rounded-md border border-[#8B11D1]/50 overflow-hidden mb-4"
+                className="relative w-full aspect-square max-w-md rounded-md border border-[#66FCF1]/50 overflow-hidden mb-4"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4 }}
@@ -295,7 +236,7 @@ export default function Home() {
                     className="w-full h-full"
                   >
                     <AniListImage 
-                      onNewImage={setCharacterName}
+                      onNewImage={handleSetCharacterName}
                       width={450}
                       height={450}
                       className="transition-all duration-300"
@@ -311,13 +252,13 @@ export default function Home() {
                       initial={{ opacity: 0, scale: 0.8 }}
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.8 }}
-                      className="absolute inset-0 bg-black/30 flex items-center justify-center flex-col p-4 z-10 backdrop-blur-sm"
+                      className="absolute inset-0 bg-[#0B0C10]/80 flex items-center justify-center flex-col p-4 z-10 backdrop-blur-sm"
                     >
                       <motion.p 
                         initial={{ y: -10, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
                         transition={{ delay: 0.1 }}
-                        className="text-white text-xl font-bold mb-2"
+                        className="text-[#C5C8C7] text-xl font-bold mb-2"
                       >
                         Character Revealed!
                       </motion.p>
@@ -325,7 +266,7 @@ export default function Home() {
                         initial={{ y: 10, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
                         transition={{ delay: 0.2 }}
-                        className="text-[#8B11D1] text-2xl font-bold"
+                        className="text-[#66FCF1] text-2xl font-bold"
                       >
                         {characterName}
                       </motion.p>
@@ -337,7 +278,7 @@ export default function Home() {
                         <Button
                           id="next-button"
                           onClick={handleNewCharacter}
-                          className="mt-6 bg-[#8B11D1] hover:bg-[#8B11D1]/80"
+                          className="mt-6 bg-[#66FCF1] hover:bg-[#66FCF1]/80 text-[#0B0C10]"
                           aria-label="Next Character"
                         >
                           Next Character →
@@ -354,13 +295,13 @@ export default function Home() {
                       initial={{ opacity: 0, scale: 0.8 }}
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.8 }}
-                      className="absolute inset-0 bg-black/30 flex items-center justify-center flex-col p-4 z-10 backdrop-blur-sm"
+                      className="absolute inset-0 bg-[#0B0C10]/80 flex items-center justify-center flex-col p-4 z-10 backdrop-blur-sm"
                     >
                       <motion.p 
                         initial={{ y: -10, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
                         transition={{ delay: 0.1 }}
-                        className="text-white text-xl font-bold mb-2"
+                        className="text-[#C5C8C7] text-xl font-bold mb-2"
                       >
                         Answer Revealed
                       </motion.p>
@@ -368,7 +309,7 @@ export default function Home() {
                         initial={{ y: 10, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
                         transition={{ delay: 0.2 }}
-                        className="text-[#8B11D1] text-2xl font-bold"
+                        className="text-[#66FCF1] text-2xl font-bold"
                       >
                         {characterName}
                       </motion.p>
@@ -376,7 +317,7 @@ export default function Home() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ delay: 0.3 }}
-                        className="text-white/70 mt-2"
+                        className="text-[#C5C8C7]/70 mt-2"
                       >
                         Loading next character...
                       </motion.p>
@@ -407,14 +348,14 @@ export default function Home() {
                     exit={{ opacity: 0, y: -10 }}
                     className="w-full max-w-md mb-3"
                   >
-                    <div className="flex w-full relative overflow-hidden rounded-md border-2 border-[#8B11D1]">
+                    <div className="flex w-full relative overflow-hidden rounded-md border-2 border-[#66FCF1]">
                       <Input
                         type="text"
                         value={guess}
                         onChange={(e) => setGuess(e.target.value)}
                         onKeyDown={handleKeyDown}
                         placeholder="Enter character name..."
-                        className="flex-1 bg-[#0a0b14] border-0 text-[#8B11D1] focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 placeholder-gray-500 h-12 px-4"
+                        className="flex-1 bg-[#1F2833] border-0 text-[#C5C8C7] focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 placeholder-[#C5C8C7]/40 h-12 px-4"
                         aria-label="Character name guess input"
                         autoFocus
                       />
@@ -422,14 +363,14 @@ export default function Home() {
                         <Button
                           onClick={handleGuess}
                           disabled={isSubmitting}
-                          className="bg-[#8B11D1] hover:bg-[#a71aef] focus:ring-[#8B11D1] rounded-none h-12 w-full text-base font-semibold transition-colors duration-200"
+                          className="bg-[#66FCF1] hover:bg-[#66FCF1]/80 focus:ring-[#66FCF1] rounded-none h-12 w-full text-base font-semibold transition-colors duration-200 text-[#0B0C10]"
                         >
                           Submit
                         </Button>
                       </motion.div>
                     </div>
                     
-                    <p className="text-white/70 text-sm text-center mt-2">
+                    <p className="text-[#C5C8C7]/70 text-sm text-center mt-2">
                       Type the character&apos;s name to guess!
                     </p>
                     
@@ -440,7 +381,7 @@ export default function Home() {
                           initial={{ opacity: 0, y: 5 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: -5 }}
-                          className="font-medium text-[#8B11D1] text-lg text-center mt-2"
+                          className="font-medium text-[#66FCF1] text-lg text-center mt-2"
                         >
                           {feedback}
                         </motion.p>
@@ -457,9 +398,9 @@ export default function Home() {
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.9 }}
-                    className="w-full max-w-md py-2 px-4 bg-[#8B11D1]/10 rounded-lg mb-4"
+                    className="w-full max-w-md py-2 px-4 bg-[#1F2833] rounded-lg mb-4"
                   >
-                    <p className="text-center text-[#8B11D1] font-medium">
+                    <p className="text-center text-[#66FCF1] font-medium">
                       Current Score: {score}
                     </p>
                   </motion.div>
@@ -473,9 +414,9 @@ export default function Home() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="w-full max-w-md py-2 px-4 bg-[#8B11D1]/10 rounded-lg mb-4"
+                    className="w-full max-w-md py-2 px-4 bg-[#1F2833] rounded-lg mb-4"
                   >
-                    <p className="text-center text-[#8B11D1]/70">
+                    <p className="text-center text-[#66FCF1]/70">
                       Saving score...
                     </p>
                   </motion.div>
@@ -512,7 +453,7 @@ export default function Home() {
                     >
                       <Button
                         onClick={handleSkip}
-                        className="bg-transparent border border-[#8B11D1] text-[#8B11D1] hover:bg-[#8B11D1]/20 hover:text-white w-full transition-all duration-200"
+                        className="bg-transparent border border-[#66FCF1] text-[#66FCF1] hover:bg-[#66FCF1]/10 hover:text-[#C5C8C7] w-full transition-all duration-200"
                         variant="outline"
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">

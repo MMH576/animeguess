@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
+import { toast } from "@/components/ui/use-toast";
 
 interface AniListImageProps {
-  onNewImage?: (characterName: string) => void;
+  onNewImage?: (characterName: string, animeTitle?: string) => void;
   width?: number;
   height?: number;
   className?: string;
@@ -17,6 +18,7 @@ const AniListImage = ({
 }: AniListImageProps) => {
   const [imageUrl, setImageUrl] = useState<string>("");
   const [characterName, setCharacterName] = useState<string>("");
+  const [animeTitle, setAnimeTitle] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<boolean>(false);
   const [imageLoaded, setImageLoaded] = useState<boolean>(false);
@@ -53,14 +55,15 @@ const AniListImage = ({
       
       setImageUrl(data.imageUrl || "/images/mystery.svg");
       setCharacterName(data.characterName || "");
+      setAnimeTitle(data.animeTitle || "");
       
-      if (onNewImage && data.characterName) {
-        onNewImage(data.characterName);
+      if (onNewImage) {
+        onNewImage(data.characterName, data.animeTitle);
       }
       
       // Always fetch character fact in easy mode
       if (difficulty === "easy" && data.characterName) {
-        await fetchCharacterFact(data.characterName);
+        await fetchCharacterFact(data.characterName, data.animeTitle);
       } else if (difficulty === "easy") {
         // Set a default fact even if no character name is available
         setCharacterFact("Look closely at the character's distinctive features!");
@@ -69,6 +72,13 @@ const AniListImage = ({
     } catch (error) {
       console.error("Error fetching anime character:", error);
       setError(true);
+      
+      toast({
+        title: "Error Loading Character",
+        description: "We couldn't fetch a character. Try again later.",
+        variant: "destructive",
+      });
+      
       if (difficulty === "easy") {
         setCharacterFact("Try looking for this character's unique appearance");
       }
@@ -83,9 +93,14 @@ const AniListImage = ({
 
   const handleRetry = () => {
     setRetryCount(prev => prev + 1);
+    toast({
+      title: "Refreshing",
+      description: "Finding a new character for you...",
+      variant: "default",
+    });
   };
 
-  const fetchCharacterFact = async (name: string) => {
+  const fetchCharacterFact = async (name: string, anime?: string) => {
     setIsLoadingFact(true);
     try {
       // Attempt to get an interesting fact about the character
@@ -99,7 +114,13 @@ const AniListImage = ({
         }
       }
       
-      // Custom generic hints based on anime series patterns
+      // If we have anime title, use it directly instead of trying to detect from name
+      if (anime && anime !== "Unknown Anime") {
+        setCharacterFact(`This character appears in ${anime}`);
+        return;
+      }
+      
+      // Custom generic hints based on anime series patterns as fallback
       createGenericHint(name);
     } catch (error) {
       console.error("Error fetching character fact:", error);
@@ -151,6 +172,13 @@ const AniListImage = ({
   const handleImageError = () => {
     console.error(`Image failed to load: ${imageUrl}`);
     setImgError(true);
+    
+    toast({
+      title: "Image Error",
+      description: "Could not load character image. Showing fallback.",
+      variant: "destructive",
+    });
+    
     // Set a default fact for error cases in easy mode
     if (difficulty === "easy" && !characterFact) {
       setCharacterFact("Look for this character's distinctive features");
@@ -158,20 +186,10 @@ const AniListImage = ({
   };
 
   const getHint = () => {
-    if (difficulty === "easy") {
-      if (isLoadingFact) return "Loading hint...";
-      if (characterFact) return characterFact;
-      
-      // Default hint without revealing character name
-      return "Look at the character's distinctive features";
-    } else if (characterName) {
-      // Normal mode only gets first letter hint if there's a character name
-      const words = characterName.split(" ");
-      return `Hint: First name starts with "${words[0][0]}"`;
+    if (characterName && animeTitle && animeTitle !== "Unknown Anime") {
+      return `This character appears in ${animeTitle}`;
     }
-    
-    // Default for normal mode with no character name
-    return "";
+    return characterFact || "Loading hint...";
   };
 
   // Calculate image effects based on difficulty
@@ -194,35 +212,35 @@ const AniListImage = ({
     const getColorClass = () => {
       const initialLetter = (characterName[0] || 'A').toUpperCase();
       const colorMap: Record<string, string> = {
-        'A': 'bg-red-600',
-        'B': 'bg-blue-600',
-        'C': 'bg-green-600',
-        'D': 'bg-yellow-600',
-        'E': 'bg-purple-600',
-        'F': 'bg-pink-600',
-        'G': 'bg-indigo-600',
-        'H': 'bg-teal-600',
-        'I': 'bg-cyan-600',
-        'J': 'bg-orange-600',
-        'K': 'bg-amber-600',
-        'L': 'bg-lime-600',
-        'M': 'bg-emerald-600',
-        'N': 'bg-blue-800',
-        'O': 'bg-violet-600',
-        'P': 'bg-fuchsia-600',
-        'Q': 'bg-rose-600',
-        'R': 'bg-sky-600',
-        'S': 'bg-red-700',
-        'T': 'bg-blue-700',
-        'U': 'bg-green-700',
-        'V': 'bg-purple-700',
-        'W': 'bg-pink-700',
-        'X': 'bg-indigo-700',
-        'Y': 'bg-yellow-700',
-        'Z': 'bg-orange-700'
+        'A': 'bg-[#66FCF1]',
+        'B': 'bg-[#45A29E]',
+        'C': 'bg-[#66FCF1]',
+        'D': 'bg-[#45A29E]',
+        'E': 'bg-[#66FCF1]',
+        'F': 'bg-[#45A29E]',
+        'G': 'bg-[#66FCF1]',
+        'H': 'bg-[#45A29E]',
+        'I': 'bg-[#66FCF1]',
+        'J': 'bg-[#45A29E]',
+        'K': 'bg-[#66FCF1]',
+        'L': 'bg-[#45A29E]',
+        'M': 'bg-[#66FCF1]',
+        'N': 'bg-[#45A29E]',
+        'O': 'bg-[#66FCF1]',
+        'P': 'bg-[#45A29E]',
+        'Q': 'bg-[#66FCF1]',
+        'R': 'bg-[#45A29E]',
+        'S': 'bg-[#66FCF1]',
+        'T': 'bg-[#45A29E]',
+        'U': 'bg-[#66FCF1]',
+        'V': 'bg-[#45A29E]',
+        'W': 'bg-[#66FCF1]',
+        'X': 'bg-[#45A29E]',
+        'Y': 'bg-[#66FCF1]',
+        'Z': 'bg-[#45A29E]'
       };
       
-      return colorMap[initialLetter] || 'bg-gray-600';
+      return colorMap[initialLetter] || 'bg-[#66FCF1]';
     };
     
     // Get initials (up to 2 characters)
@@ -237,7 +255,7 @@ const AniListImage = ({
     
     return (
       <div className={`w-full h-full flex items-center justify-center ${getColorClass()}`}>
-        <span className="text-white text-5xl font-bold">
+        <span className="text-[#0B0C10] text-5xl font-bold">
           {getInitials()}
         </span>
       </div>
@@ -249,19 +267,19 @@ const AniListImage = ({
       {/* Image container */}
       <div className={`relative rounded-lg overflow-hidden ${className}`} style={{ width, height }}>
         {loading ? (
-          <div className="flex items-center justify-center w-full h-full bg-black/30">
+          <div className="flex items-center justify-center w-full h-full bg-[#1F2833]">
             <div className="flex flex-col items-center">
-              <div className="w-12 h-12 border-4 border-[#8B11D1] border-t-transparent rounded-full animate-spin mb-2"></div>
-              <div className="text-[#8B11D1]">Loading character...</div>
+              <div className="w-12 h-12 border-4 border-[#66FCF1] border-t-transparent rounded-full animate-spin mb-2"></div>
+              <div className="text-[#66FCF1]">Loading character...</div>
             </div>
           </div>
         ) : error ? (
-          <div className="flex items-center justify-center w-full h-full bg-black/50">
+          <div className="flex items-center justify-center w-full h-full bg-[#1F2833]">
             <div className="text-center">
               <div className="text-red-500 mb-2">Failed to load image</div>
               <button 
                 onClick={handleRetry}
-                className="px-4 py-2 bg-[#8B11D1]/70 text-white rounded-lg hover:bg-[#8B11D1] transition-colors"
+                className="px-4 py-2 bg-[#66FCF1] text-[#0B0C10] rounded-lg hover:bg-[#66FCF1]/80 transition-colors"
               >
                 Try Again
               </button>
@@ -272,8 +290,8 @@ const AniListImage = ({
           getFallbackContent()
         ) : (
           <>
-            <div className={`absolute inset-0 bg-black/50 flex items-center justify-center z-10 transition-opacity duration-300 ${imageLoaded ? 'opacity-0' : 'opacity-100'}`}>
-              <div className="w-10 h-10 border-4 border-[#8B11D1] border-t-transparent rounded-full animate-spin"></div>
+            <div className={`absolute inset-0 bg-[#1F2833] flex items-center justify-center z-10 transition-opacity duration-300 ${imageLoaded ? 'opacity-0' : 'opacity-100'}`}>
+              <div className="w-10 h-10 border-4 border-[#66FCF1] border-t-transparent rounded-full animate-spin"></div>
             </div>
             {/* Using standard img tag instead of Next/Image for better external image compatibility */}
             <img
@@ -289,8 +307,8 @@ const AniListImage = ({
       
       {/* DIRECT HINT DISPLAY - always visible in easy mode without needing clicks */}
       {difficulty === "easy" && (
-        <div className="w-full mt-3 mb-1 py-3 px-4 bg-red-600 rounded-md text-center">
-          <p className="text-white font-bold text-base">
+        <div className="w-full mt-3 mb-1 py-3 px-4 bg-[#66FCF1] rounded-md text-center">
+          <p className="text-[#0B0C10] font-bold text-base">
             {isLoadingFact ? "Loading hint..." : getHint()}
           </p>
         </div>
@@ -298,7 +316,7 @@ const AniListImage = ({
       
       {/* Only show normal mode hint if there's a character name */}
       {difficulty === "normal" && !loading && !error && !imgError && characterName && (
-        <div className="mt-2 text-sm text-[#8B11D1]/70 text-center">
+        <div className="mt-2 text-sm text-[#66FCF1] text-center">
           {getHint()}
         </div>
       )}

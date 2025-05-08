@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { UserButton, useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { useGameState } from "@/lib/useGameState";
@@ -57,23 +57,23 @@ export default function Home() {
     };
   }, []);
 
-  const handleNewCharacter = () => {
+  const handleNewCharacter = useCallback(() => {
     setCardKey(prev => prev + 1);
     setIsCorrect(false);
     setGuess("");
     setFeedback("");
     setIsSkipping(false);
     setCurrentAnime("");
-  };
+  }, []);
 
-  const handleToggleDifficulty = () => {
+  const handleToggleDifficulty = useCallback(() => {
     // Toggle easy mode
     setIsEasyMode(prev => !prev);
     // Get a new character when changing difficulty
     handleNewCharacter();
-  };
+  }, [handleNewCharacter]);
 
-  const handleSkip = () => {
+  const handleSkip = useCallback(() => {
     // Show correct answer briefly
     setIsSkipping(true);
     setFeedback(`The correct answer was: ${characterName}`);
@@ -82,41 +82,51 @@ export default function Home() {
     setTimeout(() => {
       handleNewCharacter();
     }, 2000); // Show answer for 2 seconds
-  };
+  }, [characterName, handleNewCharacter]);
 
-  const handleGuess = () => {
+  const handleGuess = useCallback(() => {
     // Basic normalization for case-insensitive comparison
     const normalizedGuess = guess.trim().toLowerCase();
     const normalizedCharacter = characterName.trim().toLowerCase();
-
-    if (normalizedGuess === normalizedCharacter) {
+    
+    // Split character name into parts to check for partial matches
+    const characterNameParts = normalizedCharacter.split(/\s+/);
+    
+    // Check if the guess exactly matches the full name or any part of the name
+    const exactMatch = normalizedGuess === normalizedCharacter;
+    const partialMatch = characterNameParts.some(part => normalizedGuess === part);
+    
+    if (exactMatch || partialMatch) {
       setFeedback("✅ Correct!");
       setIsCorrect(true);
-      updateScore(10);
+      
+      // Award points based on difficulty
+      const points = isEasyMode ? 5 : 10;
+      updateScore(points);
       
       // Show toast notification
       toast({
         title: "Correct Answer!",
-        description: `+10 points${currentAnime ? ` - ${currentAnime}` : ""}`,
+        description: `+${points} points${currentAnime ? ` - ${currentAnime}` : ""}`,
         variant: "success",
       });
     } else {
       setFeedback("❌ Try again");
     }
-  };
+  }, [guess, characterName, isEasyMode, updateScore, currentAnime, toast]);
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
       handleGuess();
     }
-  };
+  }, [handleGuess]);
 
-  const handleSetCharacterName = (name: string, animeTitle?: string) => {
+  const handleSetCharacterName = useCallback((name: string, animeTitle?: string) => {
     setCharacterName(name);
     if (animeTitle) {
       setCurrentAnime(animeTitle);
     }
-  };
+  }, []);
 
   // Show loading state while not authenticated
   if (!isLoaded || !isSignedIn) {
@@ -392,20 +402,15 @@ export default function Home() {
               </AnimatePresence>
               
               {/* Score Info */}
-              <AnimatePresence>
-                {isCorrect && !isSubmitting && (
-                  <motion.div 
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.9 }}
-                    className="w-full max-w-md py-2 px-4 bg-[#1F2833] rounded-lg mb-4"
-                  >
-                    <p className="text-center text-[#66FCF1] font-medium">
-                      Current Score: {score}
-                    </p>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="w-full max-w-md py-2 px-4 bg-[#1F2833] rounded-lg mb-4"
+              >
+                <p className="text-center text-[#66FCF1] font-medium">
+                  Current Score: {score}
+                </p>
+              </motion.div>
               
               {/* Submission Status */}
               <AnimatePresence>

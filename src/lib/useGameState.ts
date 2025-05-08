@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { useLocalScores } from '@/components/LocalScoreManager';
+import { useScoreContext } from './ScoreContext';
 
 export type GameDifficulty = 'easy' | 'normal' | 'hard';
 
@@ -15,8 +16,9 @@ interface GameState {
 }
 
 export function useGameState(initialDifficulty: GameDifficulty = 'normal') {
-  const { isSignedIn, user } = useUser();
+  const { isSignedIn } = useUser();
   const { saveLocalScore } = useLocalScores();
+  const { updateCurrentScore, triggerLeaderboardRefresh } = useScoreContext();
   const [gameState, setGameState] = useState<GameState>({
     score: 0,
     difficulty: initialDifficulty,
@@ -25,14 +27,20 @@ export function useGameState(initialDifficulty: GameDifficulty = 'normal') {
     error: null
   });
   
-  // Update score
+  // Update the score immediately when changed
   const updateScore = useCallback((points: number) => {
+    const newScore = gameState.score + points;
+    
+    // Update local state
     setGameState(prev => ({
       ...prev,
-      score: prev.score + points,
+      score: newScore,
       recentlySubmitted: false
     }));
-  }, []);
+    
+    // Update the shared context immediately
+    updateCurrentScore(newScore);
+  }, [gameState.score, updateCurrentScore]);
   
   // Change difficulty
   const setDifficulty = useCallback((difficulty: GameDifficulty) => {
@@ -97,13 +105,16 @@ export function useGameState(initialDifficulty: GameDifficulty = 'normal') {
       
       console.log('Score submitted successfully:', responseData);
       
-      // Mark as submitted
+      // Mark as submitted and trigger leaderboard refresh
       setGameState(prev => ({
         ...prev,
         recentlySubmitted: true,
         isSubmitting: false,
         error: null
       }));
+      
+      // Trigger leaderboard refresh immediately
+      triggerLeaderboardRefresh();
     } catch (error) {
       console.error('Error submitting score:', error);
       
@@ -117,7 +128,7 @@ export function useGameState(initialDifficulty: GameDifficulty = 'normal') {
           : 'Score saved locally only. Server connection failed.'
       }));
     }
-  }, [isSignedIn, user, gameState.score, gameState.difficulty, gameState.recentlySubmitted, saveLocalScore]);
+  }, [isSignedIn, gameState.score, gameState.difficulty, gameState.recentlySubmitted, saveLocalScore, triggerLeaderboardRefresh]);
   
   // Reset game state
   const resetScore = useCallback(() => {
@@ -127,7 +138,10 @@ export function useGameState(initialDifficulty: GameDifficulty = 'normal') {
       recentlySubmitted: false,
       error: null
     }));
-  }, []);
+    
+    // Also update the context score
+    updateCurrentScore(0);
+  }, [updateCurrentScore]);
   
   return {
     score: gameState.score,

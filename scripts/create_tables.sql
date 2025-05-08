@@ -19,15 +19,26 @@ CREATE TABLE IF NOT EXISTS public.plays (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
+-- Profiles Table
+CREATE TABLE IF NOT EXISTS public.profiles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id TEXT UNIQUE NOT NULL,
+  avatar_url TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+
 -- Add indexes for better query performance
 CREATE INDEX IF NOT EXISTS scores_user_id_idx ON public.scores(user_id);
 CREATE INDEX IF NOT EXISTS scores_created_at_idx ON public.scores(created_at);
+CREATE INDEX IF NOT EXISTS scores_difficulty_idx ON public.scores(difficulty);
 CREATE INDEX IF NOT EXISTS plays_user_id_idx ON public.plays(user_id);
 CREATE INDEX IF NOT EXISTS plays_play_date_idx ON public.plays(play_date);
 
 -- Enable Row Level Security
 ALTER TABLE public.scores ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.plays ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for scores
 DROP POLICY IF EXISTS "Users can view all scores" ON public.scores;
@@ -59,4 +70,16 @@ CREATE POLICY "Users can insert their plays"
 DROP POLICY IF EXISTS "Users can update their plays" ON public.plays;
 CREATE POLICY "Users can update their plays" 
   ON public.plays FOR UPDATE 
-  USING (auth.uid()::text = user_id OR auth.role() = 'service_role'); 
+  USING (auth.uid()::text = user_id OR auth.role() = 'service_role');
+
+-- RLS Policies for profiles
+DROP POLICY IF EXISTS "Users can update their own profile" ON public.profiles;
+CREATE POLICY "Users can update their own profile" 
+  ON public.profiles FOR ALL
+  USING (auth.uid()::text = user_id)
+  WITH CHECK (auth.uid()::text = user_id);
+
+DROP POLICY IF EXISTS "Users can view any profile" ON public.profiles;
+CREATE POLICY "Users can view any profile" 
+  ON public.profiles FOR SELECT 
+  USING (true); 

@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useUser } from '@clerk/nextjs';
 import type { Score } from '@/lib/supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useScoreContext } from '@/lib/ScoreContext';
+import supabase from '@/lib/supabaseClient';
 
 // Extend the Score type to include username
 type ExtendedScore = Score & {
@@ -19,79 +21,354 @@ export function Leaderboard({
   initialPeriod = 'all'
 }: LeaderboardProps) {
   const { user } = useUser();
+  const { refreshLeaderboard } = useScoreContext();
   const [scores, setScores] = useState<ExtendedScore[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [period, setPeriod] = useState<'all' | 'week' | 'month'>(initialPeriod);
+  const [retryCount, setRetryCount] = useState(0);
+  const [isLiveEnabled, setIsLiveEnabled] = useState(true);
+  const realtimeSubscription = useRef<{ unsubscribe: () => void } | null>(null);
   
-  // Note: Difficulty filtering removed until database supports it
-  // const [difficulty, setDifficulty] = useState<'all' | 'easy' | 'normal' | 'hard'>(initialDifficulty);
-
-  useEffect(() => {
-    const fetchLeaderboard = async () => {
-      setLoading(true);
-      setError(null);
+  // Track if any new scores have been received in real-time
+  const [hasNewScores, setHasNewScores] = useState(false);
+  
+  // Store fetchLeaderboard in a ref to avoid dependency loops
+  const fetchLeaderboardRef = useRef<() => Promise<void>>(async () => {});
+  
+  // Function to fetch leaderboard data
+  const fetchLeaderboard = useCallback(async () => {
+    if (typeof window === 'undefined') return;
+    setLoading(true);
+    setError(null);
+    setHasNewScores(false);
+    
+    try {
+      // Build query parameters
+      const params = new URLSearchParams();
+      if (period !== 'all') params.append('period', period);
+      params.append('limit', '20');
       
-      try {
-        // Build query parameters - Note: difficulty parameter is not used until database supports it
-        const params = new URLSearchParams();
-        if (period !== 'all') params.append('period', period);
-        params.append('limit', '20');
-        
-        // Fetch the leaderboard data
-        const response = await fetch(`/api/scores?${params.toString()}`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch leaderboard data');
+      // Add cache-busting timestamp with more precision
+      params.append('t', `${Date.now()}-${Math.random().toString(36).substring(2, 10)}`);
+      
+      console.log('Fetching leaderboard data...');
+      
+      // Try the simplified endpoint first (more reliable)
+      const apiUrl = `/api/scores/simple?${params.toString()}`;
+      console.log('Using API endpoint:', apiUrl);
+      
+      // Fetch the leaderboard data with stronger no-cache directives
+      const response = await fetch(apiUrl, {
+        method: 'GET',
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
+          'Pragma': 'no-cache',
+          'Expires': '0'
         }
+      });
+      
+      // Force cache invalidation with this extra headers check
+      if (!response.headers.get('date')) {
+        console.warn('Response may be cached, attempting retry with forced revalidation');
+        const retryResponse = await fetch(apiUrl, {
+          method: 'GET',
+          cache: 'reload',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          }
+        });
         
-        const data = await response.json();
-        setScores(data.leaderboard || []);
-      } catch (err) {
-        console.error('Error fetching leaderboard:', err);
-        setError('Failed to load leaderboard. Please try again later.');
-      } finally {
-        setLoading(false);
+        if (retryResponse.ok) {
+          const retryData = await retryResponse.json();
+          console.log('Leaderboard retry data received:', retryData.leaderboard?.length || 0, 'entries');
+          
+          // Apply the same filtering to retry data, safely handling user being null
+          let filteredRetryScores = retryData.leaderboard?.filter((score: ExtendedScore) => {
+            return !score.username.startsWith('Player ') || (user && score.user_id === user.id);
+          }) || [];
+          
+          // Filter out duplicate usernames in the retry data as well
+          const uniqueRetryUsernames = new Set<string>();
+          filteredRetryScores = filteredRetryScores.filter((score: ExtendedScore) => {
+            if (uniqueRetryUsernames.has(score.username)) {
+              return false;
+            }
+            uniqueRetryUsernames.add(score.username);
+            return true;
+          });
+          
+          console.log('Filtered retry leaderboard entries:', filteredRetryScores.length);
+          setScores(filteredRetryScores);
+          setLoading(false);
+          setRetryCount(0);
+          
+          // Set up real-time subscription after successful fetch
+          setupRealtimeSubscription();
+          return;
+        }
+      }
+      
+      const responseText = await response.text();
+      
+      // Try to parse the response as JSON
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch {
+        console.error('Failed to parse leaderboard response:', responseText);
+        throw new Error(`Invalid response format: ${responseText.substring(0, 100)}`);
+      }
+      
+      // Check for error in the response
+      if (!response.ok) {
+        throw new Error(data.error || `Failed to fetch leaderboard data (${response.status})`);
+      }
+      
+      console.log('Leaderboard data received:', data.leaderboard?.length || 0, 'entries');
+      
+      // Filter placeholder users, safely handling user being null
+      let filteredScores = data.leaderboard?.filter((score: ExtendedScore) => {
+        return !score.username.startsWith('Player ') || (user && score.user_id === user.id);
+      }) || [];
+      
+      // Filter duplicate usernames, keeping only the highest score for each user
+      const uniqueUsernames = new Set<string>();
+      filteredScores = filteredScores.filter((score: ExtendedScore) => {
+        if (uniqueUsernames.has(score.username)) {
+          return false;
+        }
+        uniqueUsernames.add(score.username);
+        return true;
+      });
+      
+      console.log('Filtered leaderboard entries:', filteredScores.length);
+      setScores(filteredScores);
+      setLoading(false);
+      setRetryCount(0); // Reset retry count on success
+      
+      // Set up real-time subscription after successful fetch
+      setupRealtimeSubscription();
+    } catch (err) {
+      console.error('Error fetching leaderboard:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load leaderboard');
+      setLoading(false);
+      
+      // Implement retry logic with exponential backoff
+      if (retryCount < 3) {
+        const backoffDelay = Math.pow(2, retryCount) * 1000; // 1s, 2s, 4s
+        console.log(`Retrying in ${backoffDelay}ms (attempt ${retryCount + 1}/3)`);
+        setTimeout(() => {
+          setRetryCount(prev => prev + 1);
+        }, backoffDelay);
+      }
+    }
+  }, [period, retryCount, user]);
+  
+  // Update the ref whenever the callback changes
+  useEffect(() => {
+    fetchLeaderboardRef.current = fetchLeaderboard;
+  }, [fetchLeaderboard]);
+  
+  // Function to subscribe to real-time updates
+  const setupRealtimeSubscription = useCallback(() => {
+    // Clean up any existing subscription
+    if (realtimeSubscription.current) {
+      realtimeSubscription.current.unsubscribe();
+      realtimeSubscription.current = null;
+    }
+    
+    if (!isLiveEnabled) return;
+    
+    console.log('[Leaderboard] Setting up real-time subscription');
+    
+    try {
+      // Create a channel for the scores table
+      const channel = supabase.channel('leaderboard-changes');
+      
+      // Subscribe to INSERT events on the scores table
+      const subscription = channel
+        .on(
+          'postgres_changes',
+          {
+            event: '*', // Listen for all events (INSERT, UPDATE, DELETE)
+            schema: 'public',
+            table: 'scores',
+          },
+          async (payload) => {
+            console.log('[Leaderboard] Real-time event received:', payload);
+            setHasNewScores(true);
+            
+            // When we receive a realtime update, fetch the entire leaderboard again
+            // This is simpler and more reliable than trying to manipulate the state directly
+            if (fetchLeaderboardRef.current) {
+              fetchLeaderboardRef.current();
+            }
+          }
+        )
+        .subscribe((status) => {
+          console.log('[Leaderboard] Subscription status:', status);
+        });
+      
+      // Store the subscription for cleanup
+      realtimeSubscription.current = {
+        unsubscribe: () => {
+          console.log('[Leaderboard] Unsubscribing from real-time updates');
+          subscription.unsubscribe();
+        }
+      };
+    } catch (error) {
+      console.error('[Leaderboard] Error setting up real-time subscription:', error);
+    }
+  }, [isLiveEnabled]);
+  
+  // Clean up subscription when component unmounts
+  useEffect(() => {
+    return () => {
+      if (realtimeSubscription.current) {
+        realtimeSubscription.current.unsubscribe();
       }
     };
+  }, []);
+
+  // Manual refresh function for the user to trigger
+  const handleRefresh = () => {
+    console.log('Manual leaderboard refresh triggered');
+    setScores([]);  // Clear current scores to show loading state
+    setLoading(true);
+    setError(null);
+    setRetryCount(0);
+    setHasNewScores(false);
+    
+    // Clear existing subscription before fetching
+    if (realtimeSubscription.current) {
+      realtimeSubscription.current.unsubscribe();
+      realtimeSubscription.current = null;
+    }
+    
+    // Add slight delay to ensure visual feedback
+    setTimeout(() => {
+      fetchLeaderboard();
+    }, 100);
+  };
+
+  // Effect to fetch leaderboard when refreshLeaderboard changes
+  useEffect(() => {
+    console.log('Leaderboard effect triggered by refreshLeaderboard:', refreshLeaderboard);
+    // Reset states before fetching
+    setScores([]);
+    setLoading(true);
+    setError(null);
+    setRetryCount(0);
+    setHasNewScores(false);
+    
+    // Clean up any existing subscription
+    if (realtimeSubscription.current) {
+      realtimeSubscription.current.unsubscribe();
+      realtimeSubscription.current = null;
+    }
+    
+    // Immediate fetch with slight delay to ensure visual feedback
+    const timer = setTimeout(() => {
+      fetchLeaderboard();
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, [fetchLeaderboard, refreshLeaderboard]);
+  
+  // Effect to refresh leaderboard when period changes
+  useEffect(() => {
+    // Clean up any existing subscription
+    if (realtimeSubscription.current) {
+      realtimeSubscription.current.unsubscribe();
+      realtimeSubscription.current = null;
+    }
     
     fetchLeaderboard();
-  }, [period]);
+  }, [period, fetchLeaderboard]);
 
   const handlePeriodChange = (newPeriod: 'all' | 'week' | 'month') => {
     setPeriod(newPeriod);
+    setRetryCount(0); // Reset retry count when period changes
+  };
+  
+  // Toggle live updates
+  const toggleLiveUpdates = () => {
+    setIsLiveEnabled(prev => {
+      const newValue = !prev;
+      if (newValue) {
+        // If enabling, set up subscription
+        setupRealtimeSubscription();
+      } else {
+        // If disabling, clear subscription
+        if (realtimeSubscription.current) {
+          realtimeSubscription.current.unsubscribe();
+          realtimeSubscription.current = null;
+        }
+      }
+      return newValue;
+    });
   };
 
   return (
     <motion.div 
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="w-full rounded-md border border-[#66FCF1]/30 bg-[#1F2833] shadow-md p-4"
+      className="bg-[#1F2833]/50 backdrop-blur-sm rounded-lg p-4 shadow-xl"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
     >
-      <div className="flex items-center justify-between mb-4">
-        <motion.h2 
-          className="text-xl font-bold text-[#C5C8C7]"
-          initial={{ y: -5 }}
-          animate={{ y: 0 }}
-        >
-          Leaderboard
-        </motion.h2>
-        
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          className="text-sm text-[#66FCF1]"
-        >
-          View Full Leaderboard
-        </motion.button>
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex items-center gap-2">
+          <h2 className="text-xl font-bold text-[#66FCF1]">Leaderboard</h2>
+          {hasNewScores && (
+            <span className="bg-[#66FCF1] text-[#0B0C10] text-xs px-1.5 py-0.5 rounded-full animate-pulse">
+              New!
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <motion.button
+            onClick={toggleLiveUpdates}
+            className={`px-2 py-1.5 rounded-md text-xs flex items-center transition-colors duration-200 ${
+              isLiveEnabled 
+                ? 'bg-[#66FCF1]/20 text-[#66FCF1]' 
+                : 'bg-[#0B0C10] text-[#C5C8C7]/70'
+            }`}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <span className={`h-2 w-2 rounded-full mr-1.5 ${isLiveEnabled ? 'bg-[#66FCF1] animate-pulse' : 'bg-[#C5C8C7]/50'}`}></span>
+            Live
+          </motion.button>
+          <motion.button
+            onClick={handleRefresh}
+            disabled={loading}
+            className="bg-[#0B0C10] hover:bg-[#1F2833] text-[#66FCF1] px-3 py-1.5 rounded-md text-sm flex items-center transition-colors duration-200"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <motion.svg 
+              xmlns="http://www.w3.org/2000/svg" 
+              className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} 
+              fill="none" 
+              viewBox="0 0 24 24" 
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </motion.svg>
+            {loading ? 'Loading...' : 'Refresh'}
+          </motion.button>
+          <a href="/leaderboard" className="text-sm text-[#66FCF1] hover:text-[#45A29E] transition-colors">
+            View Full
+          </a>
+        </div>
       </div>
-      
-      {/* Filter controls */}
-      <motion.div 
-        className="grid grid-cols-3 gap-1 mb-4"
-        initial={{ opacity: 0, y: 5 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-      >
+
+      {/* Period selector */}
+      <motion.div className="flex gap-2 mb-4">
         <motion.button 
           className={`px-3 py-2 text-sm rounded-md transition-all ${period === 'all' ? 'bg-[#66FCF1]' : 'bg-[#0B0C10]'} ${period === 'all' ? 'text-[#0B0C10]' : 'text-[#C5C8C7]'}`}
           onClick={() => handlePeriodChange('all')}
@@ -100,6 +377,7 @@ export function Leaderboard({
         >
           All Time
         </motion.button>
+        
         <motion.button 
           className={`px-3 py-2 text-sm rounded-md transition-all ${period === 'month' ? 'bg-[#66FCF1]' : 'bg-[#0B0C10]'} ${period === 'month' ? 'text-[#0B0C10]' : 'text-[#C5C8C7]'}`}
           onClick={() => handlePeriodChange('month')}
@@ -108,6 +386,7 @@ export function Leaderboard({
         >
           Month
         </motion.button>
+        
         <motion.button 
           className={`px-3 py-2 text-sm rounded-md transition-all ${period === 'week' ? 'bg-[#66FCF1]' : 'bg-[#0B0C10]'} ${period === 'week' ? 'text-[#0B0C10]' : 'text-[#C5C8C7]'}`}
           onClick={() => handlePeriodChange('week')}
@@ -147,9 +426,17 @@ export function Leaderboard({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="text-red-500 text-center py-4"
+            className="text-red-500 text-center py-4 flex flex-col items-center"
           >
-            {error}
+            <div className="mb-2">{error}</div>
+            <motion.button
+              onClick={handleRefresh}
+              className="px-3 py-1 bg-[#0B0C10] text-[#66FCF1] text-xs rounded-md hover:bg-[#1F2833] transition-colors"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              Try Again
+            </motion.button>
           </motion.div>
         ) : scores.length === 0 ? (
           <motion.div 
@@ -202,7 +489,7 @@ export function Leaderboard({
                       </span>
                     ) : (
                       <span className="text-[#C5C8C7]">
-                        {score.username}
+                        {score.username || `Player ${score.user_id.substring(0, 4)}`}
                       </span>
                     )}
                   </div>

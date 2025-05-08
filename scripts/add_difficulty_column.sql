@@ -1,3 +1,6 @@
+-- NOTE: This migration is no longer needed as the difficulty column is now part of the base schema.
+-- Keeping this file for historical reference only.
+
 -- Add difficulty column to scores table
 ALTER TABLE public.scores ADD COLUMN IF NOT EXISTS difficulty TEXT DEFAULT 'normal';
 

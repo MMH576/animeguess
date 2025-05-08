@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import type { Character } from "@/lib/characters";
 import { useGameState } from "@/lib/useGameState";
+import { toast } from "@/components/ui/use-toast";
 
 interface CharacterCardProps {
   character: Character;
@@ -25,17 +26,19 @@ export const CharacterCard = ({
   const [isLoadingFact, setIsLoadingFact] = useState(false);
   const { updateScore, submitScore, score, isSubmitting, error } = useGameState();
 
-  useEffect(() => {
-    // Log image URL for debugging
-    console.log(`CharacterCard loading image: ${character.image}`);
-    
-    // Fetch character fact if in easy mode
-    if (isEasyMode && !characterFact) {
-      fetchCharacterFact();
-    }
-  }, [character.image, isEasyMode, character.name]);
+  // Create a default fact based on character properties
+  const setDefaultFact = useCallback(() => {
+    const defaultFacts = [
+      `This character has a distinctive appearance`,
+      `Look for unique features of this character`,
+      `This character is from ${character.anime}`,
+      `This character has a memorable personality`,
+      `Look at the character's outfit and color scheme`,
+    ];
+    setCharacterFact(defaultFacts[Math.floor(Math.random() * defaultFacts.length)]);
+  }, [character.anime]);
 
-  const fetchCharacterFact = async () => {
+  const fetchCharacterFact = useCallback(async () => {
     setIsLoadingFact(true);
     try {
       // Try to get interesting fact about character
@@ -57,19 +60,17 @@ export const CharacterCard = ({
     } finally {
       setIsLoadingFact(false);
     }
-  };
+  }, [character.name, setDefaultFact]);
 
-  // Create a default fact based on character properties
-  const setDefaultFact = () => {
-    const defaultFacts = [
-      `This character has a distinctive appearance`,
-      `Look for unique features of this character`,
-      `This character is from ${character.anime}`,
-      `This character has a memorable personality`,
-      `Look at the character's outfit and color scheme`,
-    ];
-    setCharacterFact(defaultFacts[Math.floor(Math.random() * defaultFacts.length)]);
-  };
+  useEffect(() => {
+    // Log image URL for debugging
+    console.log(`CharacterCard loading image: ${character.image}`);
+    
+    // Fetch character fact if in easy mode
+    if (isEasyMode && !characterFact) {
+      fetchCharacterFact();
+    }
+  }, [character.image, isEasyMode, character.name, characterFact, fetchCharacterFact]);
 
   // Submit score when correct answer is given, but only once
   useEffect(() => {
@@ -79,36 +80,52 @@ export const CharacterCard = ({
     }
   }, [isCorrect, submitScore, hasSubmittedScore]);
 
-  const handleGuess = () => {
+  const handleGuess = useCallback(() => {
     const normalizedGuess = guess.trim().toLowerCase();
     const normalizedAnswer = character.name.toLowerCase();
+    
+    // Split character name into parts to check for partial matches
+    const characterNameParts = normalizedAnswer.split(/\s+/);
+    
+    // Check if the guess exactly matches the full name or any part of the name
+    const exactMatch = normalizedGuess === normalizedAnswer;
+    const partialMatch = characterNameParts.some(part => normalizedGuess === part);
 
-    if (normalizedGuess === normalizedAnswer) {
+    if (exactMatch || partialMatch) {
       setFeedback("✅ You got it!");
       setIsCorrect(true);
-      // Award points for correct guess
-      updateScore(10);
+      // Award points for correct guess based on difficulty
+      const points = isEasyMode ? 5 : 10;
+      updateScore(points);
+      
+      // Show toast notification for correct answer
+      toast({
+        title: "Correct Answer!",
+        description: `+${points} points - ${character.anime}`,
+        variant: "success",
+      });
+      
       onCorrectGuess();
     } else {
       setFeedback("❌ Try again");
     }
-  };
+  }, [guess, character.name, character.anime, isEasyMode, updateScore, onCorrectGuess, toast]);
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
       handleGuess();
     }
-  };
+  }, [handleGuess]);
 
-  const handleImageLoad = () => {
+  const handleImageLoad = useCallback(() => {
     console.log(`Image loaded successfully: ${character.image}`);
     setImageLoaded(true);
-  };
+  }, [character.image]);
 
-  const handleImageError = () => {
+  const handleImageError = useCallback(() => {
     console.error(`Failed to load image: ${character.image}`);
     setImgError(true);
-  };
+  }, [character.image]);
 
   // Generate fallback image from character name for when images fail to load
   const getFallbackContent = () => {

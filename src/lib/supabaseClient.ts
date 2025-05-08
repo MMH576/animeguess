@@ -43,8 +43,14 @@ export const testSupabaseConnection = async () => {
   }
 };
 
-// Create Supabase client
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Create Supabase client with realtime enabled
+const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  realtime: {
+    params: {
+      eventsPerSecond: 10
+    }
+  }
+});
 
 export default supabase;
 

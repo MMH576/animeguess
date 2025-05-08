@@ -280,6 +280,12 @@ const characterHints: Record<string, CharacterHint> = {
     ability: "Can see lifespans and is invisible to most",
     role: "Observer with a taste for apples",
     series: "Death Note"
+  },
+  "Saiki Kusuo": {
+    appearance: "Has pink hair and wears green-tinted glasses",
+    ability: "Has incredible psychic and supernatural powers",
+    role: "High school student trying to live a normal life despite his powers",
+    series: "The Disastrous Life of Saiki K"
   }
 };
 
@@ -414,6 +420,16 @@ const animeVisualHints: Record<string, string[]> = {
     "This character exists in a world of heroes and monsters",
     "Character might belong to the Hero Association",
     "Look for their hero rank or classification"
+  ],
+  "The Disastrous Life of Saiki K": [
+    "Character may have unusual hair color",
+    "This character might wear special gear to limit their abilities",
+    "Character tries to avoid standing out despite being extraordinary",
+    "Known for deadpan expressions or reactions",
+    "This character has powers they try to keep hidden",
+    "Character narrates their thoughts frequently",
+    "This character deals with absurd situations in everyday life",
+    "Look for unique accessories that help control their powers"
   ]
 };
 
@@ -521,6 +537,17 @@ function guessAnimeFromName(name: string): string | null {
   if (nameLower.includes("saitama") || nameLower.includes("genos") || nameLower.includes("punch") || 
       nameLower.includes("hero") || nameLower.includes("caped")) {
     return "One Punch Man";
+  }
+  
+  if (nameLower.includes("saiki") || nameLower.includes("kusuo") || 
+      nameLower.includes("psychic") || nameLower.includes("disastrous")) {
+    return "The Disastrous Life of Saiki K";
+  }
+  
+  if (nameLower.includes("koro-sensei") || nameLower.includes("nagisa") || 
+      nameLower.includes("karma") || nameLower.includes("assassination") || 
+      nameLower.includes("classroom")) {
+    return "Assassination Classroom";
   }
   
   // If no match found

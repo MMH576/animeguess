@@ -1,18 +1,18 @@
 import { getServerSupabase } from '@/lib/supabaseClient';
-import { getAuth } from '@clerk/nextjs/server';
 import { NextRequest, NextResponse } from 'next/server';
+
+// Type for API responses
+type ApiResponse = {
+  [key: string]: unknown;
+};
 
 // Define a minimal user type with only the properties we need
 interface ClerkUser {
   id: string;
   username?: string | null;
   firstName?: string | null;
+  emailAddresses?: Array<{emailAddress: string}>;
 }
-
-// Type for API responses
-type ApiResponse = {
-  [key: string]: unknown;
-};
 
 // Helper function to create a response with no-cache headers
 const createNoCacheResponse = (data: ApiResponse, status = 200) => {
@@ -26,135 +26,9 @@ const createNoCacheResponse = (data: ApiResponse, status = 200) => {
   });
 };
 
-// POST /api/scores - Record a new score
-export async function POST(request: NextRequest) {
-  // 1. Authenticate the user
-  let userId;
-  try {
-    const auth = getAuth(request);
-    userId = auth.userId;
-  } catch (authError) {
-    console.error('Authentication error:', authError);
-    return createNoCacheResponse(
-      { error: 'Authentication service unavailable', details: 'Please try again later' },
-      500
-    );
-  }
-  
-  if (!userId) {
-    return createNoCacheResponse(
-      { error: 'Authentication required' },
-      401
-    );
-  }
-
-  try {
-    // 2. Parse and validate the score data
-    const body = await request.json();
-    const { score } = body;
-    
-    if (typeof score !== 'number' || score < 0) {
-      return NextResponse.json(
-        { error: 'Invalid score value' },
-        { status: 400 }
-      );
-    }
-
-    // 3. Get server-side Supabase client
-    const supabase = getServerSupabase();
-    if (!supabase) {
-      return NextResponse.json(
-        { error: 'Database configuration error' },
-        { status: 500 }
-      );
-    }
-
-    // 4. Check if user already has a score
-    const { data: existingScore, error: fetchError } = await supabase
-      .from('scores')
-      .select('id, score')
-      .eq('user_id', userId)
-      .single();
-
-    // Handle fetch error
-    if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 is "no rows returned" error
-      console.error('Error checking existing score:', fetchError);
-      return NextResponse.json(
-        { error: 'Failed to check existing score' },
-        { status: 500 }
-      );
-    }
-
-    let result;
-    
-    // 5. Add the new score to the existing total or create a new record
-    if (existingScore) {
-      // Calculate the new cumulative score
-      const newTotalScore = existingScore.score + score;
-      
-      // Update the user's score with the new total
-      const { data, error } = await supabase
-        .from('scores')
-        .update({ 
-          score: newTotalScore
-        })
-        .eq('id', existingScore.id)
-        .select()
-        .single();
-        
-      if (error) {
-        console.error('Error updating score:', error);
-        return NextResponse.json(
-          { error: 'Failed to update score' },
-          { status: 500 }
-        );
-      }
-      
-      result = data;
-    } else {
-      // No existing score found, create a new one
-      const { data, error } = await supabase
-        .from('scores')
-        .insert([{ 
-          user_id: userId, 
-          score,
-          created_at: new Date().toISOString()
-        }])
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error submitting score:', error);
-        return NextResponse.json(
-          { error: 'Failed to save score' },
-          { status: 500 }
-        );
-      }
-      
-      result = data;
-    }
-
-    // 6. Return success response with the saved/updated score
-    return createNoCacheResponse({ 
-      success: true, 
-      score: result 
-    });
-  } catch (error) {
-    console.error('Error in score submission:', error);
-    return NextResponse.json(
-      { error: 'Failed to process score submission' },
-      { status: 500 }
-    );
-  }
-}
-
-// GET /api/scores - Get leaderboard
-// Query parameters:
-// - period: 'all' | 'week' | 'month' (default: 'all')
-// - difficulty: 'easy' | 'normal' | 'hard' (default: all difficulties)
-// - limit: number (default: 10)
+// GET /api/scores/simple - Get leaderboard without Clerk integration
 export async function GET(request: NextRequest) {
-  console.log('[API] Leaderboard fetch started');
+  console.log('[API] Simple leaderboard fetch started');
   
   try {
     // 1. Parse query parameters
@@ -171,9 +45,9 @@ export async function GET(request: NextRequest) {
     const supabase = getServerSupabase();
     if (!supabase) {
       console.error('[API] Failed to initialize Supabase client - configuration error');
-      return NextResponse.json(
+      return createNoCacheResponse(
         { error: 'Database service unavailable', details: 'Configuration error' },
-        { status: 503 }
+        503
       );
     }
     
@@ -208,20 +82,20 @@ export async function GET(request: NextRequest) {
     // 5. Handle query errors
     if (queryError) {
       console.error('[API] Database query error:', queryError);
-      return NextResponse.json(
+      return createNoCacheResponse(
         { 
           error: 'Failed to fetch leaderboard data',
           details: queryError.message,
           code: queryError.code
         },
-        { status: 500 }
+        500
       );
     }
     
     // If no data is returned, send empty array (not an error)
     if (!data || data.length === 0) {
       console.log('[API] No scores found, returning empty leaderboard');
-      return NextResponse.json({ 
+      return createNoCacheResponse({ 
         leaderboard: [],
         period,
         total: 0
@@ -246,17 +120,22 @@ export async function GET(request: NextRequest) {
     }
 
     // 7. Combine scores with user information
-    console.log('[API] Combining scores with user information');
+    console.log('[API] Formatting leaderboard data with real user info');
     const leaderboardWithUserInfo = data.map(score => {
       const user = users.find(u => u.id === score.user_id);
+      
+      // Use real usernames from Clerk when available
       return {
         ...score,
-        username: user?.username || user?.firstName || `Player ${score.user_id.substring(0, 4)}`,
+        username: user?.username || 
+                 user?.firstName || 
+                 (user?.emailAddresses && user.emailAddresses[0]?.emailAddress.split('@')[0]) || 
+                 `Player ${score.user_id.substring(0, 4)}`,
       };
     });
     
     // 8. Return success response
-    console.log('[API] Leaderboard fetch completed successfully');
+    console.log('[API] Simple leaderboard fetch completed successfully');
     return createNoCacheResponse({ 
       leaderboard: leaderboardWithUserInfo,
       period,
@@ -265,18 +144,18 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     // Capture and log the full error stack
-    console.error('[API] Unhandled error in leaderboard fetch:', error);
+    console.error('[API] Unhandled error in simple leaderboard fetch:', error);
     if (error instanceof Error && error.stack) {
       console.error('[API] Error stack:', error.stack);
     }
     
-    return NextResponse.json(
+    return createNoCacheResponse(
       { 
         error: 'Internal server error',
         details: error instanceof Error ? error.message : 'Unknown error occurred',
         timestamp: new Date().toISOString()
       },
-      { status: 500 }
+      500
     );
   }
 } 

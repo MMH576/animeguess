@@ -31,6 +31,28 @@ interface AniListCharacter {
   media?: AnimeMedia;
 }
 
+// Character-to-anime corrections for known API inconsistencies
+const characterAnimeCorrections: Record<string, string> = {
+  "Saiki Kusuo": "The Disastrous Life of Saiki K",
+  "Saiki": "The Disastrous Life of Saiki K",
+  "Kusuo Saiki": "The Disastrous Life of Saiki K",
+  "Koro-sensei": "Assassination Classroom",
+  "Nagisa Shiota": "Assassination Classroom"
+};
+
+// Function to correct anime title if needed
+function correctAnimeTitle(characterName: string, animeTitle: string): string {
+  // Check if this character needs a corrected anime title
+  const nameLower = characterName.toLowerCase();
+  for (const [key, value] of Object.entries(characterAnimeCorrections)) {
+    if (nameLower.includes(key.toLowerCase())) {
+      console.log(`Correcting anime for ${characterName}: ${animeTitle} → ${value}`);
+      return value;
+    }
+  }
+  return animeTitle;
+}
+
 // Module-scoped cache for character data to avoid excessive API calls
 let cachedCharacters: AniListCharacter[] = [];
 let cacheTimestamp: number = 0;
@@ -165,9 +187,12 @@ export async function GET() {
     // Extract character information
     const characterName = randomCharacter.name.full;
     const imageUrl = randomCharacter.image.large;
-    const animeTitle = randomCharacter.media?.nodes?.[0]?.title?.english || 
-                      randomCharacter.media?.nodes?.[0]?.title?.romaji || 
-                      "Unknown Anime";
+    let animeTitle = randomCharacter.media?.nodes?.[0]?.title?.english || 
+                    randomCharacter.media?.nodes?.[0]?.title?.romaji || 
+                    "Unknown Anime";
+    
+    // Apply corrections for known character/anime mismatches
+    animeTitle = correctAnimeTitle(characterName, animeTitle);
     
     console.log(`Selected random character: ${characterName} from ${animeTitle}`);
     

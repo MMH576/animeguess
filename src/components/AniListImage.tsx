@@ -103,6 +103,13 @@ const AniListImage = ({
   const fetchCharacterFact = async (name: string, anime?: string) => {
     setIsLoadingFact(true);
     try {
+      // In easy mode, if anime title is available, prioritize using it as the hint
+      if (difficulty === "easy" && anime && anime !== "Unknown Anime") {
+        setCharacterFact(`This character appears in ${anime}`);
+        setIsLoadingFact(false);
+        return;
+      }
+      
       // Attempt to get an interesting fact about the character
       const factResponse = await fetch(`/api/character-fact?name=${encodeURIComponent(name)}`);
       
@@ -186,6 +193,12 @@ const AniListImage = ({
   };
 
   const getHint = () => {
+    // In easy mode, always show the anime name as a hint if available
+    if (difficulty === "easy" && characterName && animeTitle && animeTitle !== "Unknown Anime") {
+      return `This character appears in ${animeTitle}`;
+    }
+    
+    // Normal hint logic for normal mode or when anime title isn't available
     if (characterName && animeTitle && animeTitle !== "Unknown Anime") {
       return `This character appears in ${animeTitle}`;
     }
@@ -301,6 +314,15 @@ const AniListImage = ({
               onLoad={handleImageLoad}
               onError={handleImageError}
             />
+            
+            {/* Permanent anime clue in easy mode */}
+            {difficulty === "easy" && animeTitle && animeTitle !== "Unknown Anime" && imageLoaded && (
+              <div className="absolute bottom-0 left-0 right-0 bg-black/70 py-2 px-3">
+                <p className="text-[#66FCF1] font-medium text-center text-sm">
+                  <span className="font-bold">Clue:</span> {animeTitle}
+                </p>
+              </div>
+            )}
           </>
         )}
       </div>

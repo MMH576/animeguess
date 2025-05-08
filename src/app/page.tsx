@@ -37,6 +37,22 @@ export default function Home() {
     }
   }, [isCorrect, submitScore, hasSubmittedScore]);
 
+  // Log image loading errors
+  useEffect(() => {
+    const handleImageError = (event: ErrorEvent) => {
+      if (event.target instanceof HTMLImageElement) {
+        console.error(`Image failed to load: ${event.target.src}`, event);
+      }
+    };
+
+    // Listen for image loading errors
+    window.addEventListener('error', handleImageError, true);
+    
+    return () => {
+      window.removeEventListener('error', handleImageError, true);
+    };
+  }, []);
+
   const handleNewCharacter = () => {
     // Reset game state
     setGuess("");

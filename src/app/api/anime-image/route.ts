@@ -71,6 +71,7 @@ async function getRegularCharacterImage(characterName: string) {
   
   try {
     // Send request to AniList GraphQL API
+    console.log(`Fetching character image for: ${characterName}`);
     const response = await fetch(ANILIST_API_URL, {
       method: "POST",
       headers: {
@@ -81,9 +82,11 @@ async function getRegularCharacterImage(characterName: string) {
         query,
         variables: { search: characterName }
       }),
+      cache: "no-store", // Ensure fresh data
     });
     
     if (!response.ok) {
+      console.error(`AniList API error: ${response.status}`, await response.text());
       throw new Error(`AniList API returned ${response.status}`);
     }
     
@@ -93,6 +96,7 @@ async function getRegularCharacterImage(characterName: string) {
     const imageUrl = data.data?.Character?.image?.large;
     
     if (imageUrl) {
+      console.log(`Successfully fetched image for ${characterName}: ${imageUrl}`);
       // Store in cache for future requests
       imageCache[characterName] = imageUrl;
       
@@ -101,12 +105,29 @@ async function getRegularCharacterImage(characterName: string) {
         characterName: characterName
       });
     } else {
+      console.error(`No image found for character: ${characterName}`, data);
       throw new Error("No character image found");
     }
   } catch (error) {
-    console.error("Error fetching from AniList:", error);
+    console.error(`Error fetching from AniList for ${characterName}:`, error);
     
-    // Return fallback image on any error
+    // Try to use backup fallback methods
+    // 1. Check if we have a silhouette already
+    const silhouettePath = getSilhouettePath(characterName);
+    if (fs.existsSync(silhouettePath)) {
+      console.log(`Using existing silhouette for ${characterName}`);
+      return NextResponse.json({ 
+        imageUrl: getSilhouetteUrl(characterName),
+        characterName: characterName
+      });
+    }
+    
+    // 2. Look for character specific fallbacks in public/silhouettes
+    const safeFileName = characterName.toLowerCase().replace(/[^a-z0-9]/g, '_');
+    const possibleSilhouettePath = `/silhouettes/${safeFileName}.png`;
+    console.log(`Trying fallback silhouette: ${possibleSilhouettePath}`);
+    
+    // 3. Last resort - use the mystery image
     return NextResponse.json({ 
       imageUrl: FALLBACK_IMAGE_URL,
       characterName: characterName,

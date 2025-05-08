@@ -1,21 +1,52 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Ensure environment variables are defined
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+// Get environment variables
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-// Create public client for client-side operations
-export const supabase = createClient(
-  supabaseUrl || 'https://placeholder-url.supabase.co',
-  supabaseAnonKey || 'placeholder-key',
-  {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true
-    }
+// Check if Supabase is configured
+export const isSupabaseConfigured = () => {
+  return supabaseUrl && supabaseAnonKey;
+};
+
+// Test Supabase connection
+export const testSupabaseConnection = async () => {
+  if (!isSupabaseConfigured()) {
+    return {
+      success: false,
+      error: 'Supabase is not configured'
+    };
   }
-);
+
+  try {
+    const { error } = await supabase
+      .from('_test_connection')
+      .select('*')
+      .limit(1);
+    
+    if (error) {
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+    
+    return {
+      success: true
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
+};
+
+// Create Supabase client
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+export default supabase;
 
 // Create a server-side admin client that bypasses RLS
 export const getServerSupabase = () => {

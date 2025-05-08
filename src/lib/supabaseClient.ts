@@ -48,7 +48,13 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   realtime: {
     params: {
       eventsPerSecond: 10
+    },
+    headers: {
+      apikey: supabaseAnonKey
     }
+  },
+  db: {
+    schema: 'public'
   }
 });
 

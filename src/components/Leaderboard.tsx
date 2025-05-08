@@ -186,10 +186,15 @@ export function Leaderboard({
     console.log('[Leaderboard] Setting up real-time subscription');
     
     try {
-      // Create a channel for the scores table
-      const channel = supabase.channel('leaderboard-changes');
+      // Create a channel for the scores table with specific configuration
+      const channel = supabase.channel('leaderboard-changes', {
+        config: {
+          broadcast: { self: true },
+          presence: { key: user?.id || 'anonymous' }
+        }
+      });
       
-      // Subscribe to INSERT events on the scores table
+      // Subscribe to all changes on the scores table
       const subscription = channel
         .on(
           'postgres_changes',
@@ -197,6 +202,11 @@ export function Leaderboard({
             event: '*', // Listen for all events (INSERT, UPDATE, DELETE)
             schema: 'public',
             table: 'scores',
+            filter: period === 'all' ? undefined : `created_at.gte.${
+              period === 'week' 
+                ? new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+                : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+            }`
           },
           async (payload) => {
             console.log('[Leaderboard] Real-time event received:', payload);
@@ -205,12 +215,22 @@ export function Leaderboard({
             // When we receive a realtime update, fetch the entire leaderboard again
             // This is simpler and more reliable than trying to manipulate the state directly
             if (fetchLeaderboardRef.current) {
-              fetchLeaderboardRef.current();
+              await fetchLeaderboardRef.current();
             }
           }
         )
         .subscribe((status) => {
           console.log('[Leaderboard] Subscription status:', status);
+          if (status === 'SUBSCRIBED') {
+            console.log('[Leaderboard] Successfully subscribed to real-time updates');
+          } else if (status === 'CHANNEL_ERROR') {
+            console.error('[Leaderboard] Channel error occurred');
+            // Attempt to reconnect after a delay
+            setTimeout(() => {
+              console.log('[Leaderboard] Attempting to reconnect...');
+              setupRealtimeSubscription();
+            }, 5000);
+          }
         });
       
       // Store the subscription for cleanup
@@ -222,8 +242,13 @@ export function Leaderboard({
       };
     } catch (error) {
       console.error('[Leaderboard] Error setting up real-time subscription:', error);
+      // Attempt to reconnect after a delay
+      setTimeout(() => {
+        console.log('[Leaderboard] Attempting to reconnect after error...');
+        setupRealtimeSubscription();
+      }, 5000);
     }
-  }, [isLiveEnabled]);
+  }, [isLiveEnabled, period, user?.id]);
   
   // Clean up subscription when component unmounts
   useEffect(() => {

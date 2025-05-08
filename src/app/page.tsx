@@ -7,13 +7,15 @@ import { useGameState } from "@/lib/useGameState";
 import { Leaderboard } from "@/components/Leaderboard";
 import AniListImage from "@/components/AniListImage";
 import DifficultySelector from "@/components/DifficultySelector";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function Home() {
   const { isLoaded, isSignedIn } = useUser();
   const router = useRouter();
   const [cardKey, setCardKey] = useState(0);
   const { resetScore, updateScore, submitScore, score, isSubmitting, error } = useGameState();
-  const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [guess, setGuess] = useState("");
   const [feedback, setFeedback] = useState("");
   const [isCorrect, setIsCorrect] = useState(false);
@@ -175,177 +177,368 @@ export default function Home() {
     }
   };
 
-  const toggleLeaderboard = () => {
-    setShowLeaderboard(prev => !prev);
-  };
-
   // Show loading state while not authenticated
   if (!isLoaded || !isSignedIn) {
     return (
-      <main className="min-h-screen bg-black py-12">
-        <div className="container mx-auto px-4">
-          <h1 className="text-3xl font-bold text-center mb-8 text-[#8B11D1]">
+      <main className="min-h-screen bg-[#0a0b14] py-12">
+        <div className="container mx-auto px-4 flex flex-col items-center">
+          <motion.h1 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-3xl font-bold text-center mb-8 text-[#8B11D1]"
+          >
             Guess the Anime Character!
-          </h1>
-          <div className="flex justify-center">
+          </motion.h1>
+          <motion.div 
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.5 }}
+            className="flex justify-center"
+          >
             <div className="animate-pulse bg-[#8B11D1]/10 rounded-xl shadow-lg w-64 h-64" />
-          </div>
+          </motion.div>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-black py-12">
+    <main className="min-h-screen bg-[#0a0b14] py-8">
       <div className="container mx-auto px-4">
-        {/* Header with title and user info */}
-        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-8">
-          <h1 className="text-3xl font-bold text-[#8B11D1]">
-            Guess the Anime Character!
-          </h1>
-          
-          <div className="flex items-center gap-4">
-            <DifficultySelector 
-              isEasyMode={isEasyMode} 
-              onToggle={handleToggleDifficulty}
+        {/* Header with title and difficulty selector */}
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="flex flex-col items-center justify-center mb-6 relative"
+        >
+          <motion.h1 
+            className="text-center font-extrabold flex items-center gap-4"
+            whileHover={{ scale: 1.02 }}
+            transition={{ type: "spring", stiffness: 400, damping: 10 }}
+          >
+            <motion.img 
+              src="/images/logo.png" 
+              alt="Luffy Logo" 
+              className="w-12 h-12 object-contain"
+              whileHover={{ rotate: 10, scale: 1.1 }}
+              transition={{ type: "spring", stiffness: 300 }}
             />
-            <UserButton 
-              appearance={{
-                elements: {
-                  userButtonAvatarBox: 'border-2 border-[#8B11D1]'
-                }
+            <motion.span 
+              className="bg-gradient-to-r from-[#FF5F6D] to-[#A71AEF] text-transparent bg-clip-text font-black uppercase tracking-widest text-shadow text-2xl"
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              whileHover={{ scale: 1.05 }}
+              transition={{ 
+                type: "spring", 
+                stiffness: 300,
+                yoyo: Infinity,
+                duration: 0.5
               }}
-            />
-          </div>
-        </div>
+            >
+              Anime Guess
+            </motion.span>
+          </motion.h1>
+          
+          {/* User button positioned absolutely */}
+          <motion.div 
+            className="absolute right-0 top-1/2 -translate-y-1/2"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+          >
+            <motion.div
+              className="relative"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              {/* Purple glow effect as a separate element behind the button */}
+              <div className="absolute inset-0 rounded-full bg-[#A71AEF] blur-xl opacity-40 group-hover:opacity-70 transition-all duration-300 scale-[2]"></div>
+              
+              <UserButton 
+                appearance={{
+                  elements: {
+                    userButtonAvatarBox: 'w-full h-full rounded-full border-2 border-[#A71AEF] shadow-xl shadow-[#8B11D1]/40 overflow-hidden z-10',
+                    userButtonBox: 'h-12 w-12 relative z-10',
+                    userButtonTrigger: 'h-12 w-12 relative z-10',
+                    userButtonAvatarImage: 'w-full h-full object-cover rounded-full',
+                    userButtonPopoverCard: 'border border-[#A71AEF]/50 shadow-lg shadow-[#8B11D1]/30 rounded-xl',
+                    userButtonPopoverActionButton: 'hover:bg-[#A71AEF]/10',
+                    userButtonPopoverActionButtonText: 'text-[#0a0b14] hover:text-[#A71AEF]',
+                    userButtonPopoverFooter: 'border-t border-[#A71AEF]/20'
+                  }
+                }}
+              />
+            </motion.div>
+          </motion.div>
+        </motion.div>
         
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Game Panel */}
-          <div>
-            <div className="flex flex-col items-center gap-6 p-6 bg-black/50 rounded-xl shadow-lg shadow-[#8B11D1]/20 max-w-md mx-auto border border-[#8B11D1]/20">
+        {/* Main content layout with game and persistent leaderboard */}
+        <div className="grid grid-cols-1 lg:grid-cols-9 gap-8">
+          {/* Game Panel - Center Column (now wider) */}
+          <div className="lg:col-span-5 lg:col-start-1">
+            <div className="flex flex-col items-center">
               {/* Character Image */}
-              <div 
-                className="relative w-full h-96 flex items-center justify-center overflow-hidden rounded-lg border-2 border-[#8B11D1]/30"
+              <motion.div 
+                className="relative w-full aspect-square max-w-md rounded-md border border-[#8B11D1]/50 overflow-hidden mb-4"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4 }}
               >
-                <AniListImage 
-                  key={cardKey}
-                  onNewImage={setCharacterName}
-                  width={320}
-                  height={384}
-                  className={`transition-all duration-300`}
-                  difficulty={isEasyMode ? "easy" : "normal"}
-                />
+                <AnimatePresence>
+                  <motion.div
+                    key={cardKey}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="w-full h-full"
+                  >
+                    <AniListImage 
+                      onNewImage={setCharacterName}
+                      width={450}
+                      height={450}
+                      className="transition-all duration-300"
+                      difficulty={isEasyMode ? "easy" : "normal"}
+                    />
+                  </motion.div>
+                </AnimatePresence>
                 
                 {/* Overlay message when correct */}
-                {isCorrect && (
-                  <div className="absolute inset-0 bg-black/30 flex items-center justify-center flex-col p-4 z-10 backdrop-blur-sm">
-                    <p className="text-white text-xl font-bold mb-2">Character Revealed!</p>
-                    <p className="text-[#8B11D1] text-2xl font-bold">{characterName}</p>
-                    <button
-                      id="next-button"
-                      onClick={handleNewCharacter}
-                      className="mt-6 px-6 py-3 bg-[#8B11D1] text-white rounded-lg hover:bg-[#8B11D1]/80 focus:outline-none focus:ring-2 focus:ring-[#8B11D1]"
-                      aria-label="Next Character"
+                <AnimatePresence>
+                  {isCorrect && (
+                    <motion.div 
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      className="absolute inset-0 bg-black/30 flex items-center justify-center flex-col p-4 z-10 backdrop-blur-sm"
                     >
-                      Next Character →
-                    </button>
-                  </div>
-                )}
+                      <motion.p 
+                        initial={{ y: -10, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: 0.1 }}
+                        className="text-white text-xl font-bold mb-2"
+                      >
+                        Character Revealed!
+                      </motion.p>
+                      <motion.p 
+                        initial={{ y: 10, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: 0.2 }}
+                        className="text-[#8B11D1] text-2xl font-bold"
+                      >
+                        {characterName}
+                      </motion.p>
+                      <motion.div
+                        initial={{ y: 20, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: 0.3 }}
+                      >
+                        <Button
+                          id="next-button"
+                          onClick={handleNewCharacter}
+                          className="mt-6 bg-[#8B11D1] hover:bg-[#8B11D1]/80"
+                          aria-label="Next Character"
+                        >
+                          Next Character →
+                        </Button>
+                      </motion.div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
                 
                 {/* Overlay message when skipping */}
-                {isSkipping && (
-                  <div className="absolute inset-0 bg-black/30 flex items-center justify-center flex-col p-4 z-10 backdrop-blur-sm">
-                    <p className="text-white text-xl font-bold mb-2">Answer Revealed</p>
-                    <p className="text-[#8B11D1] text-2xl font-bold">{characterName}</p>
-                    <p className="text-white/70 mt-2">Loading next character...</p>
-                  </div>
-                )}
-              </div>
+                <AnimatePresence>
+                  {isSkipping && (
+                    <motion.div 
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      className="absolute inset-0 bg-black/30 flex items-center justify-center flex-col p-4 z-10 backdrop-blur-sm"
+                    >
+                      <motion.p 
+                        initial={{ y: -10, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: 0.1 }}
+                        className="text-white text-xl font-bold mb-2"
+                      >
+                        Answer Revealed
+                      </motion.p>
+                      <motion.p 
+                        initial={{ y: 10, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: 0.2 }}
+                        className="text-[#8B11D1] text-2xl font-bold"
+                      >
+                        {characterName}
+                      </motion.p>
+                      <motion.p 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.3 }}
+                        className="text-white/70 mt-2"
+                      >
+                        Loading next character...
+                      </motion.p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+              
+              {/* Difficulty Selector moved here for better accessibility */}
+              <motion.div
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="w-full max-w-md mb-4"
+              >
+                <DifficultySelector 
+                  isEasyMode={isEasyMode} 
+                  onToggle={handleToggleDifficulty}
+                  className="w-full justify-center"
+                />
+              </motion.div>
               
               {/* Guess Input (hidden when correct or skipping) */}
-              {!isCorrect && !isSkipping && (
-                <div className="w-full space-y-4">
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={guess}
-                      onChange={(e) => setGuess(e.target.value)}
-                      onKeyDown={handleKeyDown}
-                      placeholder="Enter character name..."
-                      className="flex-1 px-4 py-3 bg-black/30 border border-[#8B11D1]/30 text-[#8B11D1] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B11D1] placeholder-[#8B11D1]/50"
-                      aria-label="Character name guess input"
-                      autoFocus
-                    />
-                    <button
-                      onClick={handleGuess}
-                      disabled={isSubmitting}
-                      className="px-6 py-3 bg-[#8B11D1] text-white rounded-lg hover:bg-[#8B11D1]/80 focus:outline-none focus:ring-2 focus:ring-[#8B11D1] focus:ring-offset-2 focus:ring-offset-black disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Submit
-                    </button>
-                  </div>
-                  
-                  <div className="flex justify-between items-center">
-                    {feedback && (
-                      <p className="font-medium text-[#8B11D1] text-lg">
-                        {feedback}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
+              <AnimatePresence>
+                {!isCorrect && !isSkipping && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="w-full max-w-md mb-3"
+                  >
+                    <div className="flex w-full relative overflow-hidden rounded-md border-2 border-[#8B11D1]">
+                      <Input
+                        type="text"
+                        value={guess}
+                        onChange={(e) => setGuess(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        placeholder="Enter character name..."
+                        className="flex-1 bg-[#0a0b14] border-0 text-[#8B11D1] focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 placeholder-gray-500 h-12 px-4"
+                        aria-label="Character name guess input"
+                        autoFocus
+                      />
+                      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="min-w-[100px]">
+                        <Button
+                          onClick={handleGuess}
+                          disabled={isSubmitting}
+                          className="bg-[#8B11D1] hover:bg-[#a71aef] focus:ring-[#8B11D1] rounded-none h-12 w-full text-base font-semibold transition-colors duration-200"
+                        >
+                          Submit
+                        </Button>
+                      </motion.div>
+                    </div>
+                    
+                    <p className="text-white/70 text-sm text-center mt-2">
+                      Type the character&apos;s name to guess!
+                    </p>
+                    
+                    <AnimatePresence mode="wait">
+                      {feedback && (
+                        <motion.p 
+                          key={feedback}
+                          initial={{ opacity: 0, y: 5 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -5 }}
+                          className="font-medium text-[#8B11D1] text-lg text-center mt-2"
+                        >
+                          {feedback}
+                        </motion.p>
+                      )}
+                    </AnimatePresence>
+                  </motion.div>
+                )}
+              </AnimatePresence>
               
               {/* Score Info */}
-              {isCorrect && !isSubmitting && (
-                <div className="w-full py-2 px-4 bg-[#8B11D1]/10 rounded-lg">
-                  <p className="text-center text-[#8B11D1] font-medium">
-                    Current Score: {score}
-                  </p>
-                </div>
-              )}
+              <AnimatePresence>
+                {isCorrect && !isSubmitting && (
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    className="w-full max-w-md py-2 px-4 bg-[#8B11D1]/10 rounded-lg mb-4"
+                  >
+                    <p className="text-center text-[#8B11D1] font-medium">
+                      Current Score: {score}
+                    </p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
               
               {/* Submission Status */}
-              {isSubmitting && (
-                <div className="w-full py-2 px-4 bg-[#8B11D1]/10 rounded-lg">
-                  <p className="text-center text-[#8B11D1]/70">
-                    Saving score...
-                  </p>
-                </div>
-              )}
+              <AnimatePresence>
+                {isSubmitting && (
+                  <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="w-full max-w-md py-2 px-4 bg-[#8B11D1]/10 rounded-lg mb-4"
+                  >
+                    <p className="text-center text-[#8B11D1]/70">
+                      Saving score...
+                    </p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
               
-              {error && (
-                <p className="text-center text-red-500 text-sm">
-                  {error}
-                </p>
-              )}
+              <AnimatePresence>
+                {error && (
+                  <motion.p 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="text-center text-red-500 text-sm"
+                  >
+                    {error}
+                  </motion.p>
+                )}
+              </AnimatePresence>
+              
+              {/* Skip button */}
+              <AnimatePresence>
+                {!isCorrect && !isSkipping && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    transition={{ delay: 0.2 }}
+                    className="mt-6"
+                  >
+                    <motion.div 
+                      whileHover={{ scale: 1.05 }} 
+                      whileTap={{ scale: 0.95 }}
+                      className="w-full max-w-md mx-auto"
+                    >
+                      <Button
+                        onClick={handleSkip}
+                        className="bg-transparent border border-[#8B11D1] text-[#8B11D1] hover:bg-[#8B11D1]/20 hover:text-white w-full transition-all duration-200"
+                        variant="outline"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+                          <polygon points="5 4 15 12 5 20 5 4"></polygon>
+                          <line x1="19" y1="5" x2="19" y2="19"></line>
+                        </svg>
+                        Skip This Character
+                      </Button>
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
-            
-            {/* Game Controls - Only show controls when not already correct and not skipping */}
-            {!isCorrect && !isSkipping && (
-              <div className="mt-6 text-center">
-                <button
-                  onClick={handleSkip}
-                  className="px-6 py-3 bg-[#8B11D1]/70 text-white rounded-lg hover:bg-[#8B11D1]/80 focus:outline-none focus:ring-2 focus:ring-[#8B11D1] focus:ring-offset-2 focus:ring-offset-black mr-4"
-                >
-                  Skip This Character
-                </button>
-                
-                <button
-                  onClick={toggleLeaderboard}
-                  className="px-6 py-3 bg-transparent border border-[#8B11D1] text-[#8B11D1] rounded-lg hover:bg-[#8B11D1]/10 focus:outline-none focus:ring-2 focus:ring-[#8B11D1] focus:ring-offset-2 focus:ring-offset-black"
-                >
-                  {showLeaderboard ? 'Hide Leaderboard' : 'Show Leaderboard'}
-                </button>
-              </div>
-            )}
           </div>
           
-          {/* Leaderboard Panel */}
-          {showLeaderboard && (
-            <div className="lg:col-span-1">
+          {/* Leaderboard Panel - Right Column */}
+          <div className="lg:col-span-4 lg:col-start-6">
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+              className="w-full"
+            >
               <Leaderboard />
-            </div>
-          )}
+            </motion.div>
+          </div>
         </div>
       </div>
     </main>

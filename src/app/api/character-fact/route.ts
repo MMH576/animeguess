@@ -432,7 +432,7 @@ const genericAppearanceHints = [
   "This character has unique clothing patterns",
   "Look for distinctive colors in their outfit",
   "Notice any special items they always carry",
-  "This character has a unique silhouette",
+  "This character has distinctive clothing",
   "Look for scars, markings, or other distinctive features",
   "This character has a unique color palette",
   "Notice any badges, emblems, or insignia they wear",

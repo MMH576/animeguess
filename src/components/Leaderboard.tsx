@@ -3,6 +3,12 @@
 import { useEffect, useState } from 'react';
 import { useUser } from '@clerk/nextjs';
 import type { Score } from '@/lib/supabaseClient';
+import { motion, AnimatePresence } from 'framer-motion';
+
+// Extend the Score type to include username
+type ExtendedScore = Score & {
+  username: string;
+};
 
 interface LeaderboardProps {
   initialPeriod?: 'all' | 'week' | 'month';
@@ -13,7 +19,7 @@ export function Leaderboard({
   initialPeriod = 'all'
 }: LeaderboardProps) {
   const { user } = useUser();
-  const [scores, setScores] = useState<Score[]>([]);
+  const [scores, setScores] = useState<ExtendedScore[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [period, setPeriod] = useState<'all' | 'week' | 'month'>(initialPeriod);
@@ -56,91 +62,159 @@ export function Leaderboard({
   };
 
   return (
-    <div className="flex flex-col space-y-4 w-full max-w-md mx-auto bg-black/50 p-6 rounded-xl shadow-lg">
-      <h2 className="text-xl font-bold text-center text-white">Leaderboard</h2>
-      
-      {/* Filter controls */}
-      <div className="flex flex-col sm:flex-row gap-2 justify-between">
-        <div className="flex gap-2">
-          <button 
-            className={`px-3 py-1 text-sm rounded-full ${period === 'all' ? 'bg-[#8B11D1] text-white' : 'bg-black/30 text-[#8B11D1]'}`}
-            onClick={() => handlePeriodChange('all')}
-          >
-            All Time
-          </button>
-          <button 
-            className={`px-3 py-1 text-sm rounded-full ${period === 'month' ? 'bg-[#8B11D1] text-white' : 'bg-black/30 text-[#8B11D1]'}`}
-            onClick={() => handlePeriodChange('month')}
-          >
-            Month
-          </button>
-          <button 
-            className={`px-3 py-1 text-sm rounded-full ${period === 'week' ? 'bg-[#8B11D1] text-white' : 'bg-black/30 text-[#8B11D1]'}`}
-            onClick={() => handlePeriodChange('week')}
-          >
-            Week
-          </button>
-        </div>
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="w-full rounded-md border border-[#8B11D1]/30 bg-black/30 p-4"
+    >
+      <div className="flex items-center justify-between mb-4">
+        <motion.h2 
+          className="text-xl font-bold text-white"
+          initial={{ y: -5 }}
+          animate={{ y: 0 }}
+        >
+          Leaderboard
+        </motion.h2>
         
-        {/* Difficulty filter removed until database supports it */}
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className="text-sm text-[#8B11D1]"
+        >
+          View Full Leaderboard
+        </motion.button>
       </div>
       
-      {/* Leaderboard table */}
-      {loading ? (
-        <div className="flex justify-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#8B11D1]"></div>
-        </div>
-      ) : error ? (
-        <div className="text-red-400 text-center py-4">{error}</div>
-      ) : scores.length === 0 ? (
-        <div className="text-[#8B11D1]/70 text-center py-8">
-          No scores yet. Be the first to play!
-        </div>
-      ) : (
-        <div className="overflow-hidden rounded-lg border border-[#8B11D1]/20">
-          <table className="min-w-full divide-y divide-[#8B11D1]/20">
-            <thead className="bg-black/40">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-[#8B11D1] uppercase tracking-wider">
-                  Rank
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-[#8B11D1] uppercase tracking-wider">
-                  Player
-                </th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-[#8B11D1] uppercase tracking-wider">
-                  Score
-                </th>
-                {/* Difficulty column removed until database supports it */}
-              </tr>
-            </thead>
-            <tbody className="bg-black/20 divide-y divide-[#8B11D1]/10">
-              {scores.map((score, index) => {
-                const isCurrentUser = user?.id === score.user_id;
-                
-                return (
-                  <tr 
-                    key={score.id} 
-                    className={isCurrentUser ? "bg-[#8B11D1]/20" : ""}
-                  >
-                    <td className="px-4 py-2 whitespace-nowrap text-sm text-white">
-                      {index + 1}
-                    </td>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm">
-                      <span className={isCurrentUser ? "text-white font-semibold" : "text-white/80"}>
-                        {isCurrentUser ? "You" : `Player ${score.user_id.substring(0, 8)}`}
+      {/* Filter controls */}
+      <motion.div 
+        className="grid grid-cols-3 gap-1 mb-4"
+        initial={{ opacity: 0, y: 5 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+      >
+        <motion.button 
+          className={`px-3 py-2 text-sm rounded-md transition-all ${period === 'all' ? 'bg-[#8B11D1]' : 'bg-black/40'} text-white`}
+          onClick={() => handlePeriodChange('all')}
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.97 }}
+        >
+          All Time
+        </motion.button>
+        <motion.button 
+          className={`px-3 py-2 text-sm rounded-md transition-all ${period === 'month' ? 'bg-[#8B11D1]' : 'bg-black/40'} text-white`}
+          onClick={() => handlePeriodChange('month')}
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.97 }}
+        >
+          Month
+        </motion.button>
+        <motion.button 
+          className={`px-3 py-2 text-sm rounded-md transition-all ${period === 'week' ? 'bg-[#8B11D1]' : 'bg-black/40'} text-white`}
+          onClick={() => handlePeriodChange('week')}
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.97 }}
+        >
+          Week
+        </motion.button>
+      </motion.div>
+      
+      {/* Table headers */}
+      <div className="grid grid-cols-3 text-xs text-[#8B11D1] uppercase mb-2 px-2">
+        <div className="text-left">Rank</div>
+        <div className="text-left">Player</div>
+        <div className="text-right">Score</div>
+      </div>
+      
+      {/* Leaderboard content */}
+      <AnimatePresence mode="wait">
+        {loading ? (
+          <motion.div 
+            key="loading"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="flex justify-center py-8"
+          >
+            <motion.div 
+              className="h-8 w-8 border-2 border-[#8B11D1] rounded-full border-t-transparent"
+              animate={{ rotate: 360 }}
+              transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+            />
+          </motion.div>
+        ) : error ? (
+          <motion.div 
+            key="error"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="text-red-400 text-center py-4"
+          >
+            {error}
+          </motion.div>
+        ) : scores.length === 0 ? (
+          <motion.div 
+            key="empty"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="text-white/70 text-center py-8"
+          >
+            No scores yet. Be the first to play!
+          </motion.div>
+        ) : (
+          <motion.div 
+            key="scores"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            {scores.slice(0, 5).map((score, index) => {
+              const isCurrentUser = user?.id === score.user_id;
+              
+              return (
+                <motion.div 
+                  key={score.id} 
+                  className={`grid grid-cols-3 items-center py-3 px-2 ${index !== scores.slice(0, 5).length - 1 ? 'border-b border-[#8B11D1]/10' : ''} ${isCurrentUser ? 'bg-[#8B11D1]/10 rounded-md' : ''}`}
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  whileHover={{ backgroundColor: isCurrentUser ? "rgba(139, 17, 209, 0.2)" : "rgba(139, 17, 209, 0.05)" }}
+                >
+                  <div className="text-sm">
+                    {index === 0 ? (
+                      <span className="flex items-center justify-center w-6 h-6 rounded-full bg-amber-400/80 text-black font-bold">
+                        {index + 1}
                       </span>
-                    </td>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm text-right text-white font-medium">
-                      {score.score}
-                    </td>
-                    {/* Difficulty column removed until database supports it */}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
+                    ) : (
+                      <span className="flex items-center justify-center w-6 h-6 text-white">
+                        {index + 1}
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-sm">
+                    {isCurrentUser ? (
+                      <span className="flex items-center text-white">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#8B11D1] mr-1">
+                          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                          <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                        {score.username || 'You'}
+                      </span>
+                    ) : (
+                      <span className="text-white">
+                        {score.username}
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-right text-white font-bold">
+                    {score.score}
+                  </div>
+                </motion.div>
+              );
+            })}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 } 

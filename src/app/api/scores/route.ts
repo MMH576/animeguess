@@ -1,6 +1,7 @@
 import { getServerSupabase } from '@/lib/supabaseClient';
 import { getAuth } from '@clerk/nextjs/server';
 import { NextRequest, NextResponse } from 'next/server';
+import type { User } from '@clerk/clerk-sdk-node';
 
 // POST /api/scores - Record a new score
 export async function POST(request: NextRequest) {
@@ -188,15 +189,29 @@ export async function GET(request: NextRequest) {
     
     const uniqueScores = Array.from(userScoreMap.values());
     uniqueScores.sort((a, b) => b.score - a.score);
-    
-    // 7. Return the processed leaderboard data (add default difficulty for UI compatibility)
-    const leaderboardWithDifficulty = uniqueScores.map(score => ({
-      ...score,
-      difficulty: 'normal' // Add default difficulty for UI compatibility
-    })) || [];
+
+    // 7. Get user information from Clerk
+    const clerkClient = await import('@clerk/clerk-sdk-node').then(mod => mod.default);
+    const userIds = uniqueScores.map(score => score.user_id);
+    let users: User[] = [];
+    try {
+      users = await clerkClient.users.getUserList({ userId: userIds });
+    } catch (error) {
+      console.error('Error fetching user details:', error);
+    }
+
+    // 8. Combine scores with user information
+    const leaderboardWithUserInfo = uniqueScores.map(score => {
+      const user = users.find((u: User) => u.id === score.user_id);
+      return {
+        ...score,
+        username: user?.username || user?.firstName || `Player ${score.user_id.substring(0, 2)}`,
+        difficulty: 'normal' // Add default difficulty for UI compatibility
+      };
+    });
     
     return NextResponse.json({ 
-      leaderboard: leaderboardWithDifficulty.slice(0, limit),
+      leaderboard: leaderboardWithUserInfo.slice(0, limit),
       period,
       difficulty: 'all'  // Default since filtering is disabled
     });

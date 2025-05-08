@@ -52,7 +52,6 @@ export const anilistCharacterPool: string[] = [
   "Kakashi Hatake",
   "Itachi Uchiha",
   "Zoro Roronoa",
-  "Sanji Vinsmoke",
   "Nami",
   "Nico Robin",
   "Levi Ackerman",
@@ -69,7 +68,6 @@ export const anilistCharacterPool: string[] = [
   "Light Yagami",
   "L Lawliet",
   "Ryuk",
-  "Tanjiro Kamado",
   "Nezuko Kamado",
   "Zenitsu Agatsuma",
   "Inosuke Hashibira",
@@ -90,5 +88,5 @@ export const anilistCharacterPool: string[] = [
   "Erza Scarlet",
   "Maka Albarn",
   "Soul Eater Evans"
-  // Total: 50 characters
+  // Total: 48 characters
 ]; 

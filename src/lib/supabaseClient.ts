@@ -72,6 +72,7 @@ export type Score = {
   score: number;
   difficulty: string;
   created_at: string;
+  username?: string;
 };
 
 export type GamePlay = {

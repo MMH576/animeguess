@@ -35,7 +35,7 @@ const AniListImage = ({
     try {
       // Add a cache-busting parameter
       const cacheBuster = Date.now();
-      const response = await fetch(`/api/anime-image?mode=normal&t=${cacheBuster}&retry=${retryCount}`, {
+      const response = await fetch(`/api/anime-image?t=${cacheBuster}&retry=${retryCount}`, {
         cache: 'no-store',
         headers: {
           'Pragma': 'no-cache',
@@ -185,10 +185,8 @@ const AniListImage = ({
   // Generate fallback content from character name
   const getFallbackContent = () => {
     if (!characterName) return (
-      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-600 to-purple-800">
-        <span className="text-white text-4xl font-bold">
-          ?
-        </span>
+      <div className="w-full h-full flex items-center justify-center bg-transparent">
+        {/* No placeholder content - completely empty */}
       </div>
     );
     

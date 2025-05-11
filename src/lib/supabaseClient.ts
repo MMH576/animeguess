@@ -56,6 +56,11 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       'x-application-name': 'animeguess',
     },
   },
+  realtime: {
+    params: {
+      eventsPerSecond: 10,
+    },
+  },
 });
 
 export default supabase;

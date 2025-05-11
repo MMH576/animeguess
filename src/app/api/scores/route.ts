@@ -150,7 +150,8 @@ export async function GET(request: NextRequest) {
     // 3. Build the query
     let query = supabase
       .from('scores')
-      .select('id, user_id, score, created_at')
+      .select('id, user_id, score, created_at, username')
+      .not('user_id', 'like', 'test-user%')  // Filter out test users
       .order('score', { ascending: false })
       .limit(limit);
     

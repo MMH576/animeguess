@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useUser } from '@clerk/nextjs';
 import supabase, { type Score } from '@/lib/supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
+import { RealtimeChannel } from '@supabase/supabase-js';
 
 // Extend the Score type to include username
 type ExtendedScore = Score & {
@@ -22,35 +23,72 @@ export function Leaderboard({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [period, setPeriod] = useState<'all' | 'week' | 'month'>(initialPeriod);
+  const [realtimeStatus, setRealtimeStatus] = useState<'connecting' | 'connected' | 'error'>('connecting');
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
-  useEffect(() => {
-    const fetchLeaderboard = async () => {
-      setLoading(true);
-      setError(null);
-      
-      try {
-        // Build query parameters
-        const params = new URLSearchParams();
-        if (period !== 'all') params.append('period', period);
-        params.append('limit', '20');
-        
-        // Fetch the leaderboard data
-        const response = await fetch(`/api/scores?${params.toString()}`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch leaderboard data');
-        }
-        
-        const data = await response.json();
-        setScores(data.leaderboard || []);
-      } catch (err) {
-        console.error('Error fetching leaderboard:', err);
-        setError('Failed to load leaderboard. Please try again later.');
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Reference to channel for cleanup
+  const channelRef = useRef<RealtimeChannel | null>(null);
+  // Track component mounted state
+  const isMountedRef = useRef(true);
+  
+  // Function to fetch leaderboard data
+  const fetchLeaderboard = async (showLoadingState = false) => {
+    if (!isMountedRef.current) return;
     
-    fetchLeaderboard();
+    if (showLoadingState) {
+      setLoading(true);
+    } else {
+      setIsRefreshing(true);
+    }
+    
+    try {
+      // Build query parameters
+      const params = new URLSearchParams();
+      if (period !== 'all') params.append('period', period);
+      params.append('limit', '20');
+      
+      // Fetch the leaderboard data
+      const response = await fetch(`/api/scores?${params.toString()}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch leaderboard data');
+      }
+      
+      const data = await response.json();
+      
+      if (isMountedRef.current) {
+        setScores(data.leaderboard || []);
+        setLastUpdated(new Date());
+        setError(null);
+      }
+    } catch (err) {
+      console.error('Error fetching leaderboard:', err);
+      if (isMountedRef.current) {
+        setError('Failed to load leaderboard. Please try again later.');
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setLoading(false);
+        setIsRefreshing(false);
+      }
+    }
+  };
+  
+  // Handle period change
+  const handlePeriodChange = (newPeriod: 'all' | 'week' | 'month') => {
+    if (newPeriod !== period) {
+      setPeriod(newPeriod);
+    }
+  };
+  
+  // Effect for period change - fetch data when period changes
+  useEffect(() => {
+    fetchLeaderboard(true);
+  }, [period]);
+  
+  // Setup real-time subscription
+  useEffect(() => {
+    isMountedRef.current = true;
     
     // Subscribe to real-time changes in the scores table
     const channel = supabase.channel('scores-channel')
@@ -58,30 +96,46 @@ export function Leaderboard({
         event: 'INSERT', 
         schema: 'public', 
         table: 'scores' 
-      }, async (payload) => {
-        console.log('New score inserted:', payload);
-        // Fetch updated leaderboard data when a new score is inserted
-        fetchLeaderboard();
+      }, () => {
+        if (isMountedRef.current) fetchLeaderboard(false);
       })
       .on('postgres_changes', { 
         event: 'UPDATE', 
         schema: 'public', 
         table: 'scores' 
-      }, async (payload) => {
-        console.log('Score updated:', payload);
-        // Fetch updated leaderboard data when a score is updated
-        fetchLeaderboard();
+      }, () => {
+        if (isMountedRef.current) fetchLeaderboard(false);
       })
-      .subscribe();
+      .subscribe((status) => {
+        if (isMountedRef.current) {
+          setRealtimeStatus(status === 'SUBSCRIBED' ? 'connected' : 'error');
+        }
+      });
     
-    // Cleanup subscription on component unmount
+    // Store channel reference for cleanup
+    channelRef.current = channel;
+    
+    // Clean up on unmount
     return () => {
-      channel.unsubscribe();
+      isMountedRef.current = false;
+      
+      if (channelRef.current) {
+        channelRef.current.unsubscribe();
+        channelRef.current = null;
+      }
     };
-  }, [period]);
+  }, []);
 
-  const handlePeriodChange = (newPeriod: 'all' | 'week' | 'month') => {
-    setPeriod(newPeriod);
+  // Get time since last update for display
+  const getLastUpdatedText = () => {
+    if (!lastUpdated) return '';
+    
+    const seconds = Math.floor((new Date().getTime() - lastUpdated.getTime()) / 1000);
+    
+    if (seconds < 10) return 'just now';
+    if (seconds < 60) return `${seconds}s ago`;
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+    return `${Math.floor(seconds / 3600)}h ago`;
   };
 
   return (
@@ -91,20 +145,42 @@ export function Leaderboard({
       className="w-full rounded-md border border-[#66FCF1]/30 bg-[#1F2833] shadow-md p-4"
     >
       <div className="flex items-center justify-between mb-4">
-        <motion.h2 
-          className="text-xl font-bold text-[#C5C8C7]"
-          initial={{ y: -5 }}
-          animate={{ y: 0 }}
-        >
-          Leaderboard
-        </motion.h2>
+        <motion.div className="flex flex-col">
+          <motion.h2 
+            className="text-xl font-bold text-[#C5C8C7] flex items-center"
+            initial={{ y: -5 }}
+            animate={{ y: 0 }}
+          >
+            Leaderboard 
+            {realtimeStatus === 'connected' && (
+              <span className="text-xs text-green-400 ml-2 flex items-center">
+                <span className="animate-pulse inline-block h-2 w-2 rounded-full bg-green-400 mr-1"></span>
+                LIVE
+              </span>
+            )}
+            {realtimeStatus === 'error' && (
+              <span className="text-xs text-red-400 ml-2 flex items-center">
+                <span className="inline-block h-2 w-2 rounded-full bg-red-400 mr-1"></span>
+                Offline
+              </span>
+            )}
+          </motion.h2>
+          {lastUpdated && (
+            <span className="text-xs text-[#C5C8C7]/60">
+              Updated {getLastUpdatedText()}
+            </span>
+          )}
+        </motion.div>
         
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           className="text-sm text-[#66FCF1]"
+          onClick={() => fetchLeaderboard(false)}
+          disabled={isRefreshing}
+          aria-label="Refresh leaderboard"
         >
-          View Full Leaderboard
+          {isRefreshing ? 'Refreshing...' : 'Refresh'}
         </motion.button>
       </div>
       
@@ -196,7 +272,7 @@ export function Leaderboard({
               
               return (
                 <motion.div 
-                  key={score.id} 
+                  key={`${score.id}-${score.score}`} 
                   className={`grid grid-cols-3 items-center py-3 px-2 ${index !== scores.slice(0, 5).length - 1 ? 'border-b border-[#66FCF1]/10' : ''} ${isCurrentUser ? 'bg-[#66FCF1]/10 rounded-md' : ''}`}
                   initial={{ opacity: 0, y: 5 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -225,7 +301,7 @@ export function Leaderboard({
                       </span>
                     ) : (
                       <span className="text-[#C5C8C7]">
-                        {score.username}
+                        {score.username || `Player ${score.user_id.slice(-4)}`}
                       </span>
                     )}
                   </div>
@@ -235,6 +311,11 @@ export function Leaderboard({
                 </motion.div>
               );
             })}
+            {realtimeStatus === 'connected' && (
+              <div className="mt-4 text-center text-xs text-[#66FCF1]/50">
+                Scores update automatically in real-time
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

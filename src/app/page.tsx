@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { useGameState } from "@/lib/useGameState";
 import { Leaderboard } from "@/components/Leaderboard";
 import AniListImage from "@/components/AniListImage";
-import DifficultySelector from "@/components/DifficultySelector";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { motion, AnimatePresence } from "framer-motion";
@@ -23,8 +22,9 @@ export default function Home() {
   const [hasSubmittedScore, setHasSubmittedScore] = useState(false);
   const [characterName, setCharacterName] = useState<string>("");
   const [isSkipping, setIsSkipping] = useState(false);
-  const [isEasyMode, setIsEasyMode] = useState(false);
   const [currentAnime, setCurrentAnime] = useState<string>("");
+  const [showHint, setShowHint] = useState(false);
+  const [hint, setHint] = useState("");
 
   useEffect(() => {
     // Redirect to sign-in if user is not authenticated
@@ -64,13 +64,8 @@ export default function Home() {
     setFeedback("");
     setIsSkipping(false);
     setCurrentAnime("");
-  };
-
-  const handleToggleDifficulty = () => {
-    // Toggle easy mode
-    setIsEasyMode(prev => !prev);
-    // Get a new character when changing difficulty
-    handleNewCharacter();
+    setShowHint(false);
+    setHint("");
   };
 
   const handleSkip = () => {
@@ -88,8 +83,11 @@ export default function Home() {
     // Basic normalization for case-insensitive comparison
     const normalizedGuess = guess.trim().toLowerCase();
     const normalizedCharacter = characterName.trim().toLowerCase();
+    const characterNameParts = normalizedCharacter.split(' ');
 
-    if (normalizedGuess === normalizedCharacter) {
+    // Check if the guess matches the full name or any part of the name
+    if (normalizedGuess === normalizedCharacter || 
+        characterNameParts.some(part => part === normalizedGuess)) {
       setFeedback("✅ Correct!");
       setIsCorrect(true);
       updateScore(10);
@@ -116,6 +114,34 @@ export default function Home() {
     if (animeTitle) {
       setCurrentAnime(animeTitle);
     }
+    
+    // Wait for state updates before generating hint
+    setTimeout(() => {
+      generateHint(name, animeTitle || "");
+    }, 0);
+  };
+
+  const generateHint = (name: string, anime: string) => {
+    // Reset hint state
+    setShowHint(false);
+    setHint("");
+    
+    if (!name) return;
+    
+    // Get the first name (first part of the full name)
+    const nameParts = name.split(' ');
+    const firstName = nameParts[0]; // First name is the first part
+    
+    // Create a hint with first letter and anime
+    const animeInfo = anime !== "Unknown Anime" && anime !== "" ? anime : "an unknown anime";
+    setHint(`First letter: "${firstName[0].toUpperCase()}" • From: ${animeInfo}`);
+  };
+  
+  const handleShowHint = () => {
+    setShowHint(true);
+    
+    // Track hint usage (optional)
+    // You could penalize score here if desired
   };
 
   // Show loading state while not authenticated
@@ -240,7 +266,7 @@ export default function Home() {
                       width={450}
                       height={450}
                       className="transition-all duration-300"
-                      difficulty={isEasyMode ? "easy" : "normal"}
+                      isRevealed={isCorrect || isSkipping}
                     />
                   </motion.div>
                 </AnimatePresence>
@@ -326,19 +352,6 @@ export default function Home() {
                 </AnimatePresence>
               </motion.div>
               
-              {/* Difficulty Selector moved here for better accessibility */}
-              <motion.div
-                initial={{ opacity: 0, y: 5 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="w-full max-w-md mb-4"
-              >
-                <DifficultySelector 
-                  isEasyMode={isEasyMode} 
-                  onToggle={handleToggleDifficulty}
-                  className="w-full justify-center"
-                />
-              </motion.div>
-              
               {/* Guess Input (hidden when correct or skipping) */}
               <AnimatePresence>
                 {!isCorrect && !isSkipping && (
@@ -369,6 +382,42 @@ export default function Home() {
                         </Button>
                       </motion.div>
                     </div>
+                    
+                    {/* Hint Button */}
+                    <motion.div 
+                      className="mt-2 text-center"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.2 }}
+                    >
+                      <Button
+                        onClick={handleShowHint}
+                        variant="ghost"
+                        className="text-[#66FCF1] hover:text-[#66FCF1]/80 hover:bg-[#66FCF1]/10 text-sm"
+                        disabled={showHint}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
+                          <circle cx="12" cy="12" r="10"></circle>
+                          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                        </svg>
+                        Need a hint?
+                      </Button>
+                    </motion.div>
+                    
+                    {/* Hint Display */}
+                    <AnimatePresence>
+                      {showHint && hint && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 5 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -5 }}
+                          className="mt-2 p-2 bg-[#66FCF1]/10 border border-[#66FCF1]/20 rounded-md text-center"
+                        >
+                          <p className="text-[#66FCF1] text-sm">{hint}</p>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                     
                     <p className="text-[#C5C8C7]/70 text-sm text-center mt-2">
                       Type the character&apos;s name to guess!

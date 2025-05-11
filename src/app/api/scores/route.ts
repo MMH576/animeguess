@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
   try {
     // 2. Parse and validate the score data
     const body = await request.json();
-    const { score } = body; // Removed difficulty assignment since it's not used
+    const { score } = body;
     
     if (typeof score !== 'number' || score < 0) {
       return NextResponse.json(
@@ -95,7 +95,6 @@ export async function POST(request: NextRequest) {
         .insert([{ 
           user_id: userId, 
           score
-          // Difficulty field removed until database is updated
         }])
         .select()
         .single();
@@ -128,14 +127,12 @@ export async function POST(request: NextRequest) {
 // GET /api/scores - Get leaderboard
 // Query parameters:
 // - period: 'all' | 'week' | 'month' (default: 'all')
-// - difficulty: 'easy' | 'normal' | 'hard' (default: all difficulties)
 // - limit: number (default: 10)
 export async function GET(request: NextRequest) {
   try {
     // 1. Parse query parameters
     const url = new URL(request.url);
     const period = url.searchParams.get('period') || 'all';
-    // Note: Difficulty parameter is ignored until database is updated
     const limit = Math.min(
       parseInt(url.searchParams.get('limit') || '10', 10),
       100 // Cap at 100 for performance
@@ -153,7 +150,7 @@ export async function GET(request: NextRequest) {
     // 3. Build the query
     let query = supabase
       .from('scores')
-      .select('id, user_id, score, created_at')  // Removed difficulty from select
+      .select('id, user_id, score, created_at')
       .order('score', { ascending: false })
       .limit(limit);
     
@@ -205,15 +202,13 @@ export async function GET(request: NextRequest) {
       const user = users.find((u: User) => u.id === score.user_id);
       return {
         ...score,
-        username: user?.username || user?.firstName || `Player ${score.user_id.substring(0, 2)}`,
-        difficulty: 'normal' // Add default difficulty for UI compatibility
+        username: user?.username || user?.firstName || `Player ${score.user_id.substring(0, 2)}`
       };
     });
     
     return NextResponse.json({ 
       leaderboard: leaderboardWithUserInfo.slice(0, limit),
-      period,
-      difficulty: 'all'  // Default since filtering is disabled
+      period
     });
   } catch (error) {
     console.error('Error in leaderboard fetch:', error);

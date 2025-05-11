@@ -6,7 +6,7 @@ interface AniListImageProps {
   width?: number;
   height?: number;
   className?: string;
-  difficulty?: "easy" | "normal";
+  isRevealed?: boolean;
 }
 
 const AniListImage = ({
@@ -14,7 +14,7 @@ const AniListImage = ({
   width = 300, 
   height = 400,
   className = "",
-  difficulty = "normal"
+  isRevealed = false
 }: AniListImageProps) => {
   const [imageUrl, setImageUrl] = useState<string>("");
   const [characterName, setCharacterName] = useState<string>("");
@@ -62,9 +62,9 @@ const AniListImage = ({
       }
       
       // Always fetch character fact in easy mode
-      if (difficulty === "easy" && data.characterName) {
+      if (data.characterName) {
         await fetchCharacterFact(data.characterName, data.animeTitle);
-      } else if (difficulty === "easy") {
+      } else {
         // Set a default fact even if no character name is available
         setCharacterFact("Look closely at the character's distinctive features!");
       }
@@ -79,7 +79,7 @@ const AniListImage = ({
         variant: "destructive",
       });
       
-      if (difficulty === "easy") {
+      if (!characterFact) {
         setCharacterFact("Try looking for this character's unique appearance");
       }
     } finally {
@@ -89,7 +89,7 @@ const AniListImage = ({
 
   useEffect(() => {
     fetchAnimeCharacter();
-  }, [difficulty, retryCount]);
+  }, [retryCount]);
 
   const handleRetry = () => {
     setRetryCount(prev => prev + 1);
@@ -180,7 +180,7 @@ const AniListImage = ({
     });
     
     // Set a default fact for error cases in easy mode
-    if (difficulty === "easy" && !characterFact) {
+    if (!characterFact) {
       setCharacterFact("Look for this character's distinctive features");
     }
   };
@@ -192,11 +192,12 @@ const AniListImage = ({
     return characterFact || "Loading hint...";
   };
 
-  // Calculate image effects based on difficulty
+  // Calculate image effects based on whether answer is revealed
   const getImageEffects = () => {
-    if (difficulty === "easy") return "blur-none";
+    // If answer is revealed, show the image without effects
+    if (isRevealed) return "";
     
-    // Normal mode - reduced blur with grayscale
+    // Otherwise apply the blur and grayscale
     return "blur-[6px] grayscale-[100%] contrast-125 brightness-110"; 
   };
 
@@ -306,18 +307,11 @@ const AniListImage = ({
       </div>
       
       {/* DIRECT HINT DISPLAY - always visible in easy mode without needing clicks */}
-      {difficulty === "easy" && (
+      {characterName && (
         <div className="w-full mt-3 mb-1 py-3 px-4 bg-[#66FCF1] rounded-md text-center">
           <p className="text-[#0B0C10] font-bold text-base">
             {isLoadingFact ? "Loading hint..." : getHint()}
           </p>
-        </div>
-      )}
-      
-      {/* Only show normal mode hint if there's a character name */}
-      {difficulty === "normal" && !loading && !error && !imgError && characterName && (
-        <div className="mt-2 text-sm text-[#66FCF1] text-center">
-          {getHint()}
         </div>
       )}
     </div>

@@ -3,7 +3,6 @@ CREATE TABLE IF NOT EXISTS public.scores (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id TEXT NOT NULL,
   score INTEGER NOT NULL,
-  difficulty TEXT DEFAULT 'normal',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
   
   CONSTRAINT scores_score_check CHECK (score >= 0)

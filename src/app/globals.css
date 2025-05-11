@@ -147,3 +147,18 @@
     opacity: 0.7;
   }
 }
+
+/* Hide difficulty tabs in leaderboard */
+.leaderboard-difficulty-tabs {
+  display: none !important;
+}
+
+/* Target the second row of tabs in the leaderboard (if using grid rows) */
+.w-full.rounded-md.border.border-\[\#66FCF1\]\/30.bg-\[\#1F2833\].shadow-md.p-4 > div:nth-of-type(3) {
+  display: none !important;
+}
+
+/* More specific selector targeting exactly the difficulty tabs row */
+.grid.grid-cols-4.gap-1.mb-4 {
+  display: none !important;
+}

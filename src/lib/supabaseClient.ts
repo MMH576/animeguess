@@ -70,7 +70,6 @@ export type Score = {
   id: string;
   user_id: string;
   score: number;
-  difficulty: string;
   created_at: string;
   username?: string;
 };

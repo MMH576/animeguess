@@ -4,22 +4,18 @@ import { useState, useCallback } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { useLocalScores } from '@/components/LocalScoreManager';
 
-export type GameDifficulty = 'easy' | 'normal' | 'hard';
-
 interface GameState {
   score: number;
-  difficulty: GameDifficulty;
   recentlySubmitted: boolean;
   isSubmitting: boolean;
   error: string | null;
 }
 
-export function useGameState(initialDifficulty: GameDifficulty = 'normal') {
+export function useGameState() {
   const { isSignedIn, user } = useUser();
   const { saveLocalScore } = useLocalScores();
   const [gameState, setGameState] = useState<GameState>({
     score: 0,
-    difficulty: initialDifficulty,
     recentlySubmitted: false,
     isSubmitting: false,
     error: null
@@ -31,14 +27,6 @@ export function useGameState(initialDifficulty: GameDifficulty = 'normal') {
       ...prev,
       score: prev.score + points,
       recentlySubmitted: false
-    }));
-  }, []);
-  
-  // Change difficulty
-  const setDifficulty = useCallback((difficulty: GameDifficulty) => {
-    setGameState(prev => ({
-      ...prev,
-      difficulty
     }));
   }, []);
   
@@ -73,8 +61,7 @@ export function useGameState(initialDifficulty: GameDifficulty = 'normal') {
     try {
       // Prepare the score data
       const scoreData = {
-        score: gameState.score,
-        difficulty: gameState.difficulty
+        score: gameState.score
       };
       
       // Send to the API
@@ -117,7 +104,7 @@ export function useGameState(initialDifficulty: GameDifficulty = 'normal') {
           : 'Score saved locally only. Server connection failed.'
       }));
     }
-  }, [isSignedIn, user, gameState.score, gameState.difficulty, gameState.recentlySubmitted, saveLocalScore]);
+  }, [isSignedIn, user, gameState.score, gameState.recentlySubmitted, saveLocalScore]);
   
   // Reset game state
   const resetScore = useCallback(() => {
@@ -131,12 +118,10 @@ export function useGameState(initialDifficulty: GameDifficulty = 'normal') {
   
   return {
     score: gameState.score,
-    difficulty: gameState.difficulty,
     isSubmitting: gameState.isSubmitting,
     error: gameState.error,
     recentlySubmitted: gameState.recentlySubmitted,
     updateScore,
-    setDifficulty,
     submitScore,
     resetScore
   };

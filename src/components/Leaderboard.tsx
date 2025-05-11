@@ -12,7 +12,6 @@ type ExtendedScore = Score & {
 
 interface LeaderboardProps {
   initialPeriod?: 'all' | 'week' | 'month';
-  // initialDifficulty removed until database supports it
 }
 
 export function Leaderboard({ 
@@ -24,16 +23,13 @@ export function Leaderboard({
   const [error, setError] = useState<string | null>(null);
   const [period, setPeriod] = useState<'all' | 'week' | 'month'>(initialPeriod);
   
-  // Note: Difficulty filtering removed until database supports it
-  // const [difficulty, setDifficulty] = useState<'all' | 'easy' | 'normal' | 'hard'>(initialDifficulty);
-
   useEffect(() => {
     const fetchLeaderboard = async () => {
       setLoading(true);
       setError(null);
       
       try {
-        // Build query parameters - Note: difficulty parameter is not used until database supports it
+        // Build query parameters
         const params = new URLSearchParams();
         if (period !== 'all') params.append('period', period);
         params.append('limit', '20');
@@ -85,7 +81,7 @@ export function Leaderboard({
         </motion.button>
       </div>
       
-      {/* Filter controls */}
+      {/* Time period filter controls */}
       <motion.div 
         className="grid grid-cols-3 gap-1 mb-4"
         initial={{ opacity: 0, y: 5 }}

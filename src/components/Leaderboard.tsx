@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useUser } from '@clerk/nextjs';
-import type { Score } from '@/lib/supabaseClient';
+import supabase, { type Score } from '@/lib/supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Extend the Score type to include username
@@ -51,6 +51,33 @@ export function Leaderboard({
     };
     
     fetchLeaderboard();
+    
+    // Subscribe to real-time changes in the scores table
+    const channel = supabase.channel('scores-channel')
+      .on('postgres_changes', { 
+        event: 'INSERT', 
+        schema: 'public', 
+        table: 'scores' 
+      }, async (payload) => {
+        console.log('New score inserted:', payload);
+        // Fetch updated leaderboard data when a new score is inserted
+        fetchLeaderboard();
+      })
+      .on('postgres_changes', { 
+        event: 'UPDATE', 
+        schema: 'public', 
+        table: 'scores' 
+      }, async (payload) => {
+        console.log('Score updated:', payload);
+        // Fetch updated leaderboard data when a score is updated
+        fetchLeaderboard();
+      })
+      .subscribe();
+    
+    // Cleanup subscription on component unmount
+    return () => {
+      channel.unsubscribe();
+    };
   }, [period]);
 
   const handlePeriodChange = (newPeriod: 'all' | 'week' | 'month') => {

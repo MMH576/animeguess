@@ -1,36 +1,20 @@
--- This schema should be executed in the Supabase SQL Editor
+-- Complete Setup Script for Supabase
+-- This will create all tables, policies, indexes, functions, and enable real-time
 
--- Start transaction
 BEGIN;
 
--- Drop all policies first to avoid conflicts
-DROP POLICY IF EXISTS "Users can insert their scores" ON public.scores;
-DROP POLICY IF EXISTS "Users can view all scores" ON public.scores;
-DROP POLICY IF EXISTS "Users can update their scores" ON public.scores;
-DROP POLICY IF EXISTS "Users can insert their plays" ON public.plays;
-DROP POLICY IF EXISTS "Users can view all plays" ON public.plays;
-DROP POLICY IF EXISTS "Users can update their plays" ON public.plays;
-DROP POLICY IF EXISTS "Users can update their own profile" ON public.profiles;
-DROP POLICY IF EXISTS "Users can view any profile" ON public.profiles;
-DROP POLICY IF EXISTS "Users can insert their own scores" ON public.scores;
-DROP POLICY IF EXISTS "Users can view their own scores" ON public.scores;
-DROP POLICY IF EXISTS "Anyone can view top scores" ON public.scores;
-DROP POLICY IF EXISTS "Users can update their own scores" ON public.scores;
-DROP POLICY IF EXISTS "Users can insert their own plays" ON public.plays;
-DROP POLICY IF EXISTS "Users can view their own plays" ON public.plays;
-DROP POLICY IF EXISTS "Users can update their own plays" ON public.plays;
-
 -- Create tables with RLS enabled
-CREATE TABLE IF NOT EXISTS public.scores (
+CREATE TABLE public.scores (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id TEXT NOT NULL,
   score INTEGER NOT NULL,
   created_at TIMESTAMPTZ DEFAULT now(),
+  difficulty TEXT DEFAULT 'normal',
   
   CONSTRAINT scores_score_check CHECK (score >= 0)
 );
 
-CREATE TABLE IF NOT EXISTS public.plays (
+CREATE TABLE public.plays (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id TEXT NOT NULL,
   play_date DATE DEFAULT CURRENT_DATE,
@@ -39,7 +23,7 @@ CREATE TABLE IF NOT EXISTS public.plays (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE TABLE IF NOT EXISTS public.profiles (
+CREATE TABLE public.profiles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id TEXT UNIQUE NOT NULL,
   avatar_url TEXT,
@@ -53,10 +37,10 @@ ALTER TABLE public.plays ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
 -- Add indexes for better query performance
-CREATE INDEX IF NOT EXISTS scores_user_id_idx ON public.scores(user_id);
-CREATE INDEX IF NOT EXISTS scores_created_at_idx ON public.scores(created_at);
-CREATE INDEX IF NOT EXISTS plays_user_id_idx ON public.plays(user_id);
-CREATE INDEX IF NOT EXISTS plays_play_date_idx ON public.plays(play_date);
+CREATE INDEX scores_user_id_idx ON public.scores(user_id);
+CREATE INDEX scores_created_at_idx ON public.scores(created_at);
+CREATE INDEX plays_user_id_idx ON public.plays(user_id);
+CREATE INDEX plays_play_date_idx ON public.plays(play_date);
 
 -- Create policies for scores table
 -- Users can insert their own scores
@@ -123,5 +107,4 @@ ALTER PUBLICATION supabase_realtime ADD TABLE scores;
 ALTER PUBLICATION supabase_realtime ADD TABLE plays;
 ALTER PUBLICATION supabase_realtime ADD TABLE profiles;
 
--- Commit the transaction
 COMMIT; 

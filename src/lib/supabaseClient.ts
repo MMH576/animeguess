@@ -44,7 +44,19 @@ export const testSupabaseConnection = async () => {
 };
 
 // Create Supabase client
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  db: {
+    schema: 'public',
+  },
+  auth: {
+    persistSession: true,
+  },
+  global: {
+    headers: {
+      'x-application-name': 'animeguess',
+    },
+  },
+});
 
 export default supabase;
 

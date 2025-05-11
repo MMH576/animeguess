@@ -170,14 +170,14 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-[#0B0C10] py-8">
+    <main className="min-h-screen bg-gradient-to-br from-[#0B0C10] via-[#121820] to-[#1A1E26] py-8">
       <div className="container mx-auto px-4">
         {/* Header with title and difficulty selector */}
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
-          className="flex flex-col items-center justify-center mb-6 relative"
+          className="flex flex-col items-center justify-center mb-8 relative"
         >
           <motion.h1 
             className="text-center font-extrabold flex items-center gap-4"
@@ -187,12 +187,12 @@ export default function Home() {
             <motion.img 
               src="/images/logo.png" 
               alt="Luffy Logo" 
-              className="w-12 h-12 object-contain"
+              className="w-14 h-14 object-contain drop-shadow-[0_0_15px_rgba(102,252,241,0.5)]"
               whileHover={{ rotate: 10, scale: 1.1 }}
               transition={{ type: "spring", stiffness: 300 }}
             />
             <motion.span 
-              className="bg-gradient-to-r from-[#66FCF1] to-[#45A29E] text-transparent bg-clip-text font-black uppercase tracking-widest text-shadow text-2xl"
+              className="bg-gradient-to-r from-[#66FCF1] to-[#45A29E] text-transparent bg-clip-text font-black uppercase tracking-widest text-shadow text-3xl"
               initial={{ scale: 0.9 }}
               animate={{ scale: 1 }}
               whileHover={{ scale: 1.05 }}
@@ -247,7 +247,7 @@ export default function Home() {
             <div className="flex flex-col items-center">
               {/* Character Image */}
               <motion.div 
-                className="relative w-full aspect-square max-w-md rounded-md border border-[#66FCF1]/50 overflow-hidden mb-4"
+                className="relative w-full aspect-square max-w-md rounded-xl border border-[#66FCF1]/30 overflow-hidden mb-6 shadow-[0_0_20px_rgba(102,252,241,0.15)]"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4 }}
@@ -278,33 +278,43 @@ export default function Home() {
                       initial={{ opacity: 0, scale: 0.8 }}
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.8 }}
-                      className="absolute inset-0 bg-[#0B0C10]/80 flex items-center justify-center flex-col p-4 z-10 backdrop-blur-sm"
+                      className="absolute inset-0 bg-gradient-to-b from-[#0B0C10]/90 to-[#0B0C10]/95 flex items-center justify-center flex-col p-4 z-10 backdrop-blur-md"
                     >
-                      <motion.p 
+                      <motion.div 
                         initial={{ y: -10, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
                         transition={{ delay: 0.1 }}
-                        className="text-[#C5C8C7] text-xl font-bold mb-2"
+                        className="bg-[#66FCF1]/20 rounded-full p-2 mb-4"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-[#66FCF1]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </motion.div>
+                      <motion.p 
+                        initial={{ y: -10, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: 0.2 }}
+                        className="text-white text-xl font-medium mb-2"
                       >
                         Character Revealed!
                       </motion.p>
                       <motion.p 
                         initial={{ y: 10, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
-                        transition={{ delay: 0.2 }}
-                        className="text-[#66FCF1] text-2xl font-bold"
+                        transition={{ delay: 0.3 }}
+                        className="text-[#66FCF1] text-3xl font-bold"
                       >
                         {characterName}
                       </motion.p>
                       <motion.div
                         initial={{ y: 20, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
-                        transition={{ delay: 0.3 }}
+                        transition={{ delay: 0.4 }}
                       >
                         <Button
                           id="next-button"
                           onClick={handleNewCharacter}
-                          className="mt-6 bg-[#66FCF1] hover:bg-[#66FCF1]/80 text-[#0B0C10]"
+                          className="mt-8 bg-gradient-to-r from-[#66FCF1] to-[#45A29E] hover:from-[#45A29E] hover:to-[#66FCF1] text-[#0B0C10] px-6 py-2 rounded-lg font-medium shadow-md transition-all duration-300"
                           aria-label="Next Character"
                         >
                           Next Character →
@@ -321,32 +331,45 @@ export default function Home() {
                       initial={{ opacity: 0, scale: 0.8 }}
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.8 }}
-                      className="absolute inset-0 bg-[#0B0C10]/80 flex items-center justify-center flex-col p-4 z-10 backdrop-blur-sm"
+                      className="absolute inset-0 bg-gradient-to-b from-[#0B0C10]/90 to-[#0B0C10]/95 flex items-center justify-center flex-col p-4 z-10 backdrop-blur-md"
                     >
-                      <motion.p 
+                      <motion.div 
                         initial={{ y: -10, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
                         transition={{ delay: 0.1 }}
-                        className="text-[#C5C8C7] text-xl font-bold mb-2"
+                        className="bg-[#66FCF1]/20 rounded-full p-2 mb-4"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-[#66FCF1]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </motion.div>
+                      <motion.p 
+                        initial={{ y: -10, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: 0.2 }}
+                        className="text-white text-xl font-medium mb-2"
                       >
                         Answer Revealed
                       </motion.p>
                       <motion.p 
                         initial={{ y: 10, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
-                        transition={{ delay: 0.2 }}
-                        className="text-[#66FCF1] text-2xl font-bold"
+                        transition={{ delay: 0.3 }}
+                        className="text-[#66FCF1] text-3xl font-bold"
                       >
                         {characterName}
                       </motion.p>
-                      <motion.p 
+                      <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
-                        transition={{ delay: 0.3 }}
-                        className="text-[#C5C8C7]/70 mt-2"
+                        transition={{ delay: 0.4 }}
+                        className="mt-4 flex items-center"
                       >
-                        Loading next character...
-                      </motion.p>
+                        <div className="w-4 h-4 rounded-full bg-[#66FCF1] animate-pulse mr-2"></div>
+                        <p className="text-white">
+                          Loading next character...
+                        </p>
+                      </motion.div>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -359,24 +382,24 @@ export default function Home() {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
-                    className="w-full max-w-md mb-3"
+                    className="w-full max-w-md mb-4"
                   >
-                    <div className="flex w-full relative overflow-hidden rounded-md border-2 border-[#66FCF1]">
+                    <div className="flex w-full relative overflow-hidden rounded-xl border-2 border-[#66FCF1]/50 shadow-[0_0_15px_rgba(102,252,241,0.1)] focus-within:shadow-[0_0_20px_rgba(102,252,241,0.25)] transition-shadow duration-300">
                       <Input
                         type="text"
                         value={guess}
                         onChange={(e) => setGuess(e.target.value)}
                         onKeyDown={handleKeyDown}
                         placeholder="Enter character name..."
-                        className="flex-1 bg-[#1F2833] border-0 text-[#C5C8C7] focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 placeholder-[#C5C8C7]/40 h-12 px-4"
+                        className="flex-1 bg-[#1F2833] border-0 text-white focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 placeholder-[#C5C8C7]/40 h-14 px-5 text-lg"
                         aria-label="Character name guess input"
                         autoFocus
                       />
-                      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="min-w-[100px]">
+                      <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="min-w-[120px]">
                         <Button
                           onClick={handleGuess}
                           disabled={isSubmitting}
-                          className="bg-[#66FCF1] hover:bg-[#66FCF1]/80 focus:ring-[#66FCF1] rounded-none h-12 w-full text-base font-semibold transition-colors duration-200 text-[#0B0C10]"
+                          className="bg-gradient-to-r from-[#66FCF1] to-[#45A29E] hover:from-[#45A29E] hover:to-[#66FCF1] rounded-none h-14 w-full text-base font-semibold transition-all duration-300 text-[#0B0C10]"
                         >
                           Submit
                         </Button>
@@ -385,7 +408,7 @@ export default function Home() {
                     
                     {/* Hint Button */}
                     <motion.div 
-                      className="mt-2 text-center"
+                      className="mt-3 text-center"
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       transition={{ delay: 0.2 }}
@@ -393,10 +416,10 @@ export default function Home() {
                       <Button
                         onClick={handleShowHint}
                         variant="ghost"
-                        className="text-[#66FCF1] hover:text-[#66FCF1]/80 hover:bg-[#66FCF1]/10 text-sm"
+                        className="text-[#66FCF1] hover:text-[#66FCF1] hover:bg-[#66FCF1]/10 text-sm font-medium px-4 py-2 rounded-lg transition-colors duration-200"
                         disabled={showHint}
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
                           <circle cx="12" cy="12" r="10"></circle>
                           <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
                           <line x1="12" y1="17" x2="12.01" y2="17"></line>
@@ -412,28 +435,30 @@ export default function Home() {
                           initial={{ opacity: 0, y: 5 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: -5 }}
-                          className="mt-2 p-2 bg-[#66FCF1]/10 border border-[#66FCF1]/20 rounded-md text-center"
+                          className="mt-3 p-3 bg-[#66FCF1]/15 border border-[#66FCF1]/30 rounded-lg text-center shadow-inner"
                         >
-                          <p className="text-[#66FCF1] text-sm">{hint}</p>
+                          <p className="text-[#66FCF1] text-sm font-medium">{hint}</p>
                         </motion.div>
                       )}
                     </AnimatePresence>
                     
-                    <p className="text-[#C5C8C7]/70 text-sm text-center mt-2">
+                    <p className="text-[#C5C8C7]/70 text-sm text-center mt-3 font-medium">
                       Type the character&apos;s name to guess!
                     </p>
                     
                     <AnimatePresence mode="wait">
                       {feedback && (
-                        <motion.p 
+                        <motion.div 
                           key={feedback}
                           initial={{ opacity: 0, y: 5 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: -5 }}
-                          className="font-medium text-[#66FCF1] text-lg text-center mt-2"
+                          className={`mt-4 p-3 rounded-lg text-center ${feedback.includes("✅") ? "bg-[#66FCF1]/15 border border-[#66FCF1]/30" : "bg-red-500/10 border border-red-500/20"}`}
                         >
-                          {feedback}
-                        </motion.p>
+                          <p className={`font-medium text-lg ${feedback.includes("✅") ? "text-[#66FCF1]" : "text-red-400"}`}>
+                            {feedback}
+                          </p>
+                        </motion.div>
                       )}
                     </AnimatePresence>
                   </motion.div>
@@ -447,11 +472,16 @@ export default function Home() {
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.9 }}
-                    className="w-full max-w-md py-2 px-4 bg-[#1F2833] rounded-lg mb-4"
+                    className="w-full max-w-md py-3 px-5 bg-gradient-to-r from-[#1F2833] to-[#1A2028] rounded-xl border border-[#66FCF1]/20 shadow-md mb-4"
                   >
-                    <p className="text-center text-[#66FCF1] font-medium">
-                      Current Score: {score}
-                    </p>
+                    <div className="flex items-center justify-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-[#66FCF1]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                      </svg>
+                      <p className="text-center text-[#66FCF1] font-bold text-lg">
+                        Current Score: {score}
+                      </p>
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -463,25 +493,28 @@ export default function Home() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="w-full max-w-md py-2 px-4 bg-[#1F2833] rounded-lg mb-4"
+                    className="w-full max-w-md py-3 px-5 bg-gradient-to-r from-[#1F2833] to-[#1A2028] rounded-xl border border-[#66FCF1]/20 shadow-md mb-4"
                   >
-                    <p className="text-center text-[#66FCF1]/70">
-                      Saving score...
-                    </p>
+                    <div className="flex items-center justify-center">
+                      <div className="w-5 h-5 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin mr-3"></div>
+                      <p className="text-center text-[#66FCF1]">
+                        Saving score...
+                      </p>
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>
               
               <AnimatePresence>
                 {error && (
-                  <motion.p 
+                  <motion.div 
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="text-center text-red-500 text-sm"
+                    className="text-center text-red-400 text-sm bg-red-500/10 border border-red-500/20 px-4 py-2 rounded-lg"
                   >
                     {error}
-                  </motion.p>
+                  </motion.div>
                 )}
               </AnimatePresence>
               
@@ -496,16 +529,15 @@ export default function Home() {
                     className="mt-6"
                   >
                     <motion.div 
-                      whileHover={{ scale: 1.05 }} 
-                      whileTap={{ scale: 0.95 }}
-                      className="w-full max-w-md mx-auto"
+                      whileHover={{ scale: 1.03, backgroundColor: "rgba(102, 252, 241, 0.15)" }} 
+                      whileTap={{ scale: 0.97 }}
                     >
-                      <Button
+                      <Button 
                         onClick={handleSkip}
-                        className="bg-transparent border border-[#66FCF1] text-[#66FCF1] hover:bg-[#66FCF1]/10 hover:text-[#C5C8C7] w-full transition-all duration-200"
                         variant="outline"
+                        className="bg-transparent border border-[#66FCF1]/40 hover:border-[#66FCF1] text-[#66FCF1] hover:text-white px-6 flex items-center gap-2 rounded-lg shadow-sm"
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <polygon points="5 4 15 12 5 20 5 4"></polygon>
                           <line x1="19" y1="5" x2="19" y2="19"></line>
                         </svg>

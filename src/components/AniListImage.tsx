@@ -266,21 +266,26 @@ const AniListImage = ({
   return (
     <div className="flex flex-col items-center w-full">
       {/* Image container */}
-      <div className={`relative rounded-lg overflow-hidden ${className}`} style={{ width, height }}>
+      <div className={`relative rounded-xl overflow-hidden ${className}`} style={{ width, height }}>
         {loading ? (
-          <div className="flex items-center justify-center w-full h-full bg-[#1F2833]">
+          <div className="flex items-center justify-center w-full h-full bg-gradient-to-b from-[#1F2833] to-[#192028]">
             <div className="flex flex-col items-center">
-              <div className="w-12 h-12 border-4 border-[#66FCF1] border-t-transparent rounded-full animate-spin mb-2"></div>
-              <div className="text-[#66FCF1]">Loading character...</div>
+              <div className="w-14 h-14 border-4 border-[#66FCF1] border-t-transparent rounded-full animate-spin mb-3"></div>
+              <div className="text-[#66FCF1] font-medium">Loading character...</div>
             </div>
           </div>
         ) : error ? (
-          <div className="flex items-center justify-center w-full h-full bg-[#1F2833]">
-            <div className="text-center">
-              <div className="text-red-500 mb-2">Failed to load image</div>
+          <div className="flex items-center justify-center w-full h-full bg-gradient-to-b from-[#1F2833] to-[#192028]">
+            <div className="text-center p-6">
+              <div className="bg-red-500/10 p-3 rounded-full mx-auto w-16 h-16 flex items-center justify-center mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <div className="text-red-400 font-medium mb-4">Failed to load image</div>
               <button 
                 onClick={handleRetry}
-                className="px-4 py-2 bg-[#66FCF1] text-[#0B0C10] rounded-lg hover:bg-[#66FCF1]/80 transition-colors"
+                className="px-5 py-2 bg-gradient-to-r from-[#66FCF1] to-[#45A29E] hover:from-[#45A29E] hover:to-[#66FCF1] text-[#0B0C10] rounded-lg font-medium transition-all duration-300 shadow-md"
               >
                 Try Again
               </button>
@@ -291,14 +296,14 @@ const AniListImage = ({
           getFallbackContent()
         ) : (
           <>
-            <div className={`absolute inset-0 bg-[#1F2833] flex items-center justify-center z-10 transition-opacity duration-300 ${imageLoaded ? 'opacity-0' : 'opacity-100'}`}>
-              <div className="w-10 h-10 border-4 border-[#66FCF1] border-t-transparent rounded-full animate-spin"></div>
+            <div className={`absolute inset-0 bg-gradient-to-b from-[#1F2833] to-[#192028] flex items-center justify-center z-10 transition-opacity duration-300 ${imageLoaded ? 'opacity-0' : 'opacity-100'}`}>
+              <div className="w-12 h-12 border-4 border-[#66FCF1] border-t-transparent rounded-full animate-spin"></div>
             </div>
             {/* Using standard img tag instead of Next/Image for better external image compatibility */}
             <img
               src={imageUrl}
               alt={`Anime character ${characterName}`}
-              className={`w-full h-full object-cover transition-opacity duration-300 ${imageLoaded ? 'opacity-100' : 'opacity-0'} ${getImageEffects()}`}
+              className={`w-full h-full object-cover transition-all duration-500 ${imageLoaded ? 'opacity-100' : 'opacity-0'} ${getImageEffects()}`}
               onLoad={handleImageLoad}
               onError={handleImageError}
             />
@@ -308,10 +313,17 @@ const AniListImage = ({
       
       {/* DIRECT HINT DISPLAY - always visible in easy mode without needing clicks */}
       {characterName && (
-        <div className="w-full mt-3 mb-1 py-3 px-4 bg-[#66FCF1] rounded-md text-center">
-          <p className="text-[#0B0C10] font-bold text-base">
-            {isLoadingFact ? "Loading hint..." : getHint()}
-          </p>
+        <div className="w-full mt-4 py-3 px-5 bg-gradient-to-r from-[#45A29E]/20 to-[#66FCF1]/20 border border-[#66FCF1]/30 rounded-lg shadow-inner text-center">
+          {isLoadingFact ? (
+            <div className="flex items-center justify-center text-[#66FCF1] font-medium">
+              <span className="w-4 h-4 border-2 border-[#66FCF1] border-t-transparent rounded-full animate-spin mr-2 inline-block"></span>
+              Loading hint...
+            </div>
+          ) : (
+            <p className="text-[#66FCF1] font-medium">
+              {getHint()}
+            </p>
+          )}
         </div>
       )}
     </div>

@@ -38,10 +38,11 @@ const nextConfig = {
         source: '/api/:path*',
         headers: [
           { key: 'Access-Control-Allow-Credentials', value: 'true' },
-          { key: 'Access-Control-Allow-Origin', value: '*' },
+          // Restrict CORS to your domain instead of allowing all origins
+          { key: 'Access-Control-Allow-Origin', value: process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000' },
           { key: 'Access-Control-Allow-Methods', value: 'GET,OPTIONS,PATCH,DELETE,POST,PUT' },
           { key: 'Access-Control-Allow-Headers', value: 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization' },
-          { key: 'Timing-Allow-Origin', value: '*' },
+          { key: 'Timing-Allow-Origin', value: process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000' },
           { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate, proxy-revalidate' },
           { key: 'Pragma', value: 'no-cache' },
           { key: 'Expires', value: '0' },
@@ -52,7 +53,7 @@ const nextConfig = {
         // Comprehensive CORS headers for all routes
         source: '/:path*',
         headers: [
-          { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Access-Control-Allow-Origin', value: process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000' },
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'Referrer-Policy', value: 'no-referrer-when-downgrade' },
           { key: 'X-Frame-Options', value: 'DENY' },
@@ -63,7 +64,7 @@ const nextConfig = {
         // Special handling for image routes to prevent CORS issues
         source: '/images/:path*',
         headers: [
-          { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Access-Control-Allow-Origin', value: process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000' },
           { key: 'Cache-Control', value: 'public, max-age=3600, stale-while-revalidate=86400' },
         ],
       },

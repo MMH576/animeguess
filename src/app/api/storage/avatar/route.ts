@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabaseClient';
+import supabase from '@/lib/supabaseClient';
 import { getAuth } from '@clerk/nextjs/server';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -26,10 +26,20 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Check file type (only allow images)
-    if (!file.type.startsWith('image/')) {
+    // Check file type (only allow specific image formats)
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!allowedTypes.includes(file.type)) {
       return NextResponse.json(
-        { error: 'File must be an image' },
+        { error: 'Invalid file type. Only JPEG, PNG, WebP, and GIF images are allowed.' },
+        { status: 400 }
+      );
+    }
+    
+    // Check file size (limit to 2MB)
+    const maxSize = 2 * 1024 * 1024; // 2MB
+    if (file.size > maxSize) {
+      return NextResponse.json(
+        { error: 'File size exceeds the 2MB limit' },
         { status: 400 }
       );
     }
@@ -37,8 +47,11 @@ export async function POST(request: NextRequest) {
     // Convert file to arrayBuffer for upload
     const buffer = await file.arrayBuffer();
     
-    // Create a file path for the user's avatar
-    const filePath = `${auth.userId}/avatar.${file.type.split('/')[1]}`;
+    // Create a safe file path for the user's avatar
+    const fileExtension = file.type.split('/')[1];
+    const safeExtension = fileExtension === 'jpeg' ? 'jpg' : 
+                        (allowedTypes.includes(`image/${fileExtension}`) ? fileExtension : 'jpg');
+    const filePath = `${auth.userId}/avatar.${safeExtension}`;
     
     // Upload file to Supabase Storage
     const { error } = await supabase

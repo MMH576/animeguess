@@ -14,7 +14,7 @@ export default function LeaderboardPage() {
           Top Players
         </h1>
         
-        <Leaderboard initialPeriod="all" />
+        <Leaderboard />
         
         <div className="mt-8 text-center">
           <Link 

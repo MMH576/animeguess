@@ -11,18 +11,11 @@ type ExtendedScore = Score & {
   username: string;
 };
 
-interface LeaderboardProps {
-  initialPeriod?: 'all' | 'week' | 'month';
-}
-
-export function Leaderboard({ 
-  initialPeriod = 'all'
-}: LeaderboardProps) {
+export function Leaderboard() {
   const { user } = useUser();
   const [scores, setScores] = useState<ExtendedScore[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [period, setPeriod] = useState<'all' | 'week' | 'month'>(initialPeriod);
   const [realtimeStatus, setRealtimeStatus] = useState<'connecting' | 'connected' | 'error'>('connecting');
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -45,7 +38,6 @@ export function Leaderboard({
     try {
       // Build query parameters
       const params = new URLSearchParams();
-      if (period !== 'all') params.append('period', period);
       params.append('limit', '20');
       
       // Fetch the leaderboard data
@@ -73,18 +65,6 @@ export function Leaderboard({
       }
     }
   };
-  
-  // Handle period change
-  const handlePeriodChange = (newPeriod: 'all' | 'week' | 'month') => {
-    if (newPeriod !== period) {
-      setPeriod(newPeriod);
-    }
-  };
-  
-  // Effect for period change - fetch data when period changes
-  useEffect(() => {
-    fetchLeaderboard(true);
-  }, [period]);
   
   // Setup real-time subscription
   useEffect(() => {
@@ -114,6 +94,9 @@ export function Leaderboard({
     
     // Store channel reference for cleanup
     channelRef.current = channel;
+    
+    // Fetch leaderboard data on mount
+    fetchLeaderboard(true);
     
     // Clean up on unmount
     return () => {
@@ -152,12 +135,6 @@ export function Leaderboard({
             animate={{ y: 0 }}
           >
             Leaderboard 
-            {realtimeStatus === 'connected' && (
-              <span className="text-xs text-green-400 ml-2 flex items-center">
-                <span className="animate-pulse inline-block h-2 w-2 rounded-full bg-green-400 mr-1"></span>
-                LIVE
-              </span>
-            )}
             {realtimeStatus === 'error' && (
               <span className="text-xs text-red-400 ml-2 flex items-center">
                 <span className="inline-block h-2 w-2 rounded-full bg-red-400 mr-1"></span>
@@ -184,37 +161,16 @@ export function Leaderboard({
         </motion.button>
       </div>
       
-      {/* Time period filter controls */}
+      {/* Time period header */}
       <motion.div 
-        className="grid grid-cols-3 gap-1 mb-4"
+        className="mb-4"
         initial={{ opacity: 0, y: 5 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
       >
-        <motion.button 
-          className={`px-3 py-2 text-sm rounded-md transition-all ${period === 'all' ? 'bg-[#66FCF1]' : 'bg-[#0B0C10]'} ${period === 'all' ? 'text-[#0B0C10]' : 'text-[#C5C8C7]'}`}
-          onClick={() => handlePeriodChange('all')}
-          whileHover={{ scale: 1.03 }}
-          whileTap={{ scale: 0.97 }}
-        >
+        <h3 className="text-center text-lg font-medium text-[#66FCF1]">
           All Time
-        </motion.button>
-        <motion.button 
-          className={`px-3 py-2 text-sm rounded-md transition-all ${period === 'month' ? 'bg-[#66FCF1]' : 'bg-[#0B0C10]'} ${period === 'month' ? 'text-[#0B0C10]' : 'text-[#C5C8C7]'}`}
-          onClick={() => handlePeriodChange('month')}
-          whileHover={{ scale: 1.03 }}
-          whileTap={{ scale: 0.97 }}
-        >
-          Month
-        </motion.button>
-        <motion.button 
-          className={`px-3 py-2 text-sm rounded-md transition-all ${period === 'week' ? 'bg-[#66FCF1]' : 'bg-[#0B0C10]'} ${period === 'week' ? 'text-[#0B0C10]' : 'text-[#C5C8C7]'}`}
-          onClick={() => handlePeriodChange('week')}
-          whileHover={{ scale: 1.03 }}
-          whileTap={{ scale: 0.97 }}
-        >
-          Week
-        </motion.button>
+        </h3>
       </motion.div>
       
       {/* Table headers */}
@@ -311,11 +267,6 @@ export function Leaderboard({
                 </motion.div>
               );
             })}
-            {realtimeStatus === 'connected' && (
-              <div className="mt-4 text-center text-xs text-[#66FCF1]/50">
-                Scores update automatically in real-time
-              </div>
-            )}
           </motion.div>
         )}
       </AnimatePresence>

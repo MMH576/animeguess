@@ -2,9 +2,8 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useUser } from '@clerk/nextjs';
-import supabase, { type Score } from '@/lib/supabaseClient';
+import { type Score } from '@/lib/supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
-import { RealtimeChannel } from '@supabase/supabase-js';
 
 // Extend the Score type to include username
 type ExtendedScore = Score & {
@@ -16,12 +15,9 @@ export function Leaderboard() {
   const [scores, setScores] = useState<ExtendedScore[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [realtimeStatus, setRealtimeStatus] = useState<'connecting' | 'connected' | 'error'>('connecting');
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   
-  // Reference to channel for cleanup
-  const channelRef = useRef<RealtimeChannel | null>(null);
   // Track component mounted state
   const isMountedRef = useRef(true);
   
@@ -70,42 +66,12 @@ export function Leaderboard() {
   useEffect(() => {
     isMountedRef.current = true;
     
-    // Subscribe to real-time changes in the scores table
-    const channel = supabase.channel('scores-channel')
-      .on('postgres_changes', { 
-        event: 'INSERT', 
-        schema: 'public', 
-        table: 'scores' 
-      }, () => {
-        if (isMountedRef.current) fetchLeaderboard(false);
-      })
-      .on('postgres_changes', { 
-        event: 'UPDATE', 
-        schema: 'public', 
-        table: 'scores' 
-      }, () => {
-        if (isMountedRef.current) fetchLeaderboard(false);
-      })
-      .subscribe((status) => {
-        if (isMountedRef.current) {
-          setRealtimeStatus(status === 'SUBSCRIBED' ? 'connected' : 'error');
-        }
-      });
-    
-    // Store channel reference for cleanup
-    channelRef.current = channel;
-    
     // Fetch leaderboard data on mount
     fetchLeaderboard(true);
     
     // Clean up on unmount
     return () => {
       isMountedRef.current = false;
-      
-      if (channelRef.current) {
-        channelRef.current.unsubscribe();
-        channelRef.current = null;
-      }
     };
   }, []);
 
@@ -135,12 +101,6 @@ export function Leaderboard() {
             animate={{ y: 0 }}
           >
             Leaderboard 
-            {realtimeStatus === 'error' && (
-              <span className="text-xs text-red-400 ml-2 flex items-center">
-                <span className="inline-block h-2 w-2 rounded-full bg-red-400 mr-1"></span>
-                Offline
-              </span>
-            )}
           </motion.h2>
           {lastUpdated && (
             <span className="text-xs text-[#C5C8C7]/60">
@@ -152,12 +112,12 @@ export function Leaderboard() {
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          className="text-sm text-[#66FCF1]"
+          className="text-sm bg-[#45A29E] hover:bg-[#66FCF1] text-[#0B0C10] font-medium px-3 py-1 rounded transition-colors duration-200"
           onClick={() => fetchLeaderboard(false)}
           disabled={isRefreshing}
           aria-label="Refresh leaderboard"
         >
-          {isRefreshing ? 'Refreshing...' : 'Refresh'}
+          {isRefreshing ? 'Refreshing...' : 'Refresh Scores'}
         </motion.button>
       </div>
       
@@ -270,6 +230,10 @@ export function Leaderboard() {
           </motion.div>
         )}
       </AnimatePresence>
+      
+      <div className="mt-4 text-center text-xs text-[#C5C8C7]/60">
+        Scores update after refresh or when you revisit the page
+      </div>
     </motion.div>
   );
 } 

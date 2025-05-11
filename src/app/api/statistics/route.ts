@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabaseClient';
+import supabase from '@/lib/supabaseClient';
 import { NextRequest, NextResponse } from 'next/server';
 
 // GET /api/statistics?query=top10&period=week

@@ -31,6 +31,40 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 
 ## Deploy on Vercel
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+This project is configured for deployment on Vercel. Follow these steps to deploy:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. **Push your code to a GitHub repository**
+
+2. **Connect to Vercel**
+
+   - Go to [Vercel](https://vercel.com) and sign up or log in
+   - Click "Add New" > "Project"
+   - Import your GitHub repository
+   - Select the repository where you pushed your code
+
+3. **Configure Environment Variables**
+   Add the following environment variables in the Vercel dashboard:
+
+   - `NEXT_PUBLIC_SUPABASE_URL` - Your Supabase project URL
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Your Supabase anon/public key
+   - `SUPABASE_SERVICE_ROLE_KEY` - Your Supabase service role key
+   - `NEXT_PUBLIC_SITE_URL` - Your Vercel deployment URL (e.g., https://your-app-name.vercel.app)
+   - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` - Your Clerk publishable key (if using Clerk)
+   - `CLERK_SECRET_KEY` - Your Clerk secret key (if using Clerk)
+
+4. **Deploy**
+
+   - Click "Deploy"
+   - Vercel will automatically build and deploy your project
+
+5. **Custom Domain (Optional)**
+
+   - In the Vercel dashboard, go to your project
+   - Click on "Domains"
+   - Add your custom domain and follow the instructions
+
+6. **Continuous Deployment**
+   - Any commits to your main branch will trigger automatic deployments
+   - You can configure deployment settings in the Vercel dashboard
+
+Check out [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.

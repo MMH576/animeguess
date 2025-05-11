@@ -38,41 +38,6 @@ export function LocalScoreManager() {
     }
   }, []);
 
-  // Function to save a new score
-  const saveScore = (score: number) => {
-    if (!isSignedIn || !user) return;
-    
-    try {
-      const newScore: LocalScore = {
-        score,
-        date: new Date().toISOString(),
-        userId: user.id,
-        username: user.username || user.firstName || undefined
-      };
-      
-      const updatedScores = [...state.scores, newScore];
-      
-      // Sort by score (highest first)
-      updatedScores.sort((a, b) => b.score - a.score);
-      
-      // Limit to top 50 scores
-      const trimmedScores = updatedScores.slice(0, 50);
-      
-      // Save to localStorage
-      localStorage.setItem('anime_guess_scores', JSON.stringify(trimmedScores));
-      
-      // Update state
-      const highestScore = Math.max(...trimmedScores.map(s => s.score), 0);
-      setState({ scores: trimmedScores, highestScore });
-      
-      return true;
-    } catch (err) {
-      console.error('Error saving local score:', err);
-      setError('Failed to save score locally');
-      return false;
-    }
-  };
-
   // Function to get user's highest score
   const getHighestScore = () => {
     if (!isSignedIn || !user) return 0;
@@ -81,12 +46,6 @@ export function LocalScoreManager() {
     if (userScores.length === 0) return 0;
     
     return Math.max(...userScores.map(s => s.score));
-  };
-
-  // Check if a score is a personal best
-  const isPersonalBest = (score: number) => {
-    if (!isSignedIn || !user) return false;
-    return score > getHighestScore();
   };
 
   if (!isLoaded) {
